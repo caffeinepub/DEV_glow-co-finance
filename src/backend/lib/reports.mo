@@ -15,7 +15,6 @@ module {
     invoices : List.List<Types.Invoice>,
     bills : List.List<Types.Bill>,
     products : List.List<Types.Product>,
-    transactions : List.List<Types.Transaction>,
     now : Common.Timestamp,
   ) : Types.DashboardStats {
     // Cash balance = sum of all paid invoice grandTotals - sum of all paid bill amounts
@@ -437,7 +436,8 @@ module {
   };
 
   func quarterBounds(quarter : Nat, year : Nat) : (Int, Int) {
-    let startMonth = (quarter - 1) * 3 + 1;
+    let q = if (quarter > 0) { quarter } else { 1 };
+    let startMonth = (q - 1) * 3 + 1;
     let endMonth = startMonth + 2;
     let (qs, _) = monthBounds(startMonth, year);
     let (_, qe) = monthBounds(endMonth, year);

@@ -166,6 +166,14 @@ export const Supplier = IDL.Record({
   'category' : BillCategory,
   'phone' : IDL.Text,
 });
+export const ExtractedBillData = IDL.Record({
+  'supplierName' : IDL.Opt(IDL.Text),
+  'date' : IDL.Opt(IDL.Text),
+  'invoiceNumber' : IDL.Opt(IDL.Text),
+  'vatAmount' : IDL.Opt(IDL.Float64),
+  'confidence' : IDL.Text,
+  'amount' : IDL.Opt(IDL.Float64),
+});
 export const AgedBucket = IDL.Record({
   'title' : IDL.Text,
   'total' : IDL.Float64,
@@ -241,6 +249,7 @@ export const idlService = IDL.Service({
   'createInvoice' : IDL.Func([CreateInvoiceData], [InvoiceShared], []),
   'createProduct' : IDL.Func([CreateProductData], [ProductShared], []),
   'createSupplier' : IDL.Func([CreateSupplierData], [Supplier], []),
+  'extractPdfBillData' : IDL.Func([IDL.Text], [ExtractedBillData], ['query']),
   'getAgedPayables' : IDL.Func([], [AgedReport], ['query']),
   'getAgedReceivables' : IDL.Func([], [AgedReport], ['query']),
   'getBill' : IDL.Func([IDL.Nat], [IDL.Opt(BillShared)], ['query']),
@@ -327,6 +336,11 @@ export const idlService = IDL.Service({
   'updateSupplier' : IDL.Func(
       [IDL.Nat, CreateSupplierData],
       [IDL.Opt(Supplier)],
+      [],
+    ),
+  'uploadBillAttachment' : IDL.Func(
+      [IDL.Nat, IDL.Text],
+      [IDL.Opt(BillShared)],
       [],
     ),
 });
@@ -492,6 +506,14 @@ export const idlFactory = ({ IDL }) => {
     'category' : BillCategory,
     'phone' : IDL.Text,
   });
+  const ExtractedBillData = IDL.Record({
+    'supplierName' : IDL.Opt(IDL.Text),
+    'date' : IDL.Opt(IDL.Text),
+    'invoiceNumber' : IDL.Opt(IDL.Text),
+    'vatAmount' : IDL.Opt(IDL.Float64),
+    'confidence' : IDL.Text,
+    'amount' : IDL.Opt(IDL.Float64),
+  });
   const AgedBucket = IDL.Record({
     'title' : IDL.Text,
     'total' : IDL.Float64,
@@ -567,6 +589,7 @@ export const idlFactory = ({ IDL }) => {
     'createInvoice' : IDL.Func([CreateInvoiceData], [InvoiceShared], []),
     'createProduct' : IDL.Func([CreateProductData], [ProductShared], []),
     'createSupplier' : IDL.Func([CreateSupplierData], [Supplier], []),
+    'extractPdfBillData' : IDL.Func([IDL.Text], [ExtractedBillData], ['query']),
     'getAgedPayables' : IDL.Func([], [AgedReport], ['query']),
     'getAgedReceivables' : IDL.Func([], [AgedReport], ['query']),
     'getBill' : IDL.Func([IDL.Nat], [IDL.Opt(BillShared)], ['query']),
@@ -657,6 +680,11 @@ export const idlFactory = ({ IDL }) => {
     'updateSupplier' : IDL.Func(
         [IDL.Nat, CreateSupplierData],
         [IDL.Opt(Supplier)],
+        [],
+      ),
+    'uploadBillAttachment' : IDL.Func(
+        [IDL.Nat, IDL.Text],
+        [IDL.Opt(BillShared)],
         [],
       ),
   });

@@ -8,10 +8,7 @@ module {
   // 2024-01-01 = 1704067200 seconds since epoch
   let base2024 : Int = 1_704_067_200_000_000_000;
   let nsPerDay : Int = 86_400_000_000_000;
-  let nsPerMonth : Int = 2_592_000_000_000_000;
-
   func daysAgo(d : Nat) : Int { base2024 + (365 * nsPerDay) - d.toInt() * nsPerDay };
-  func daysFromBase(d : Nat) : Int { base2024 + d.toInt() * nsPerDay };
 
   // Seed all collections with realistic Glow & Co. sample data
   public func seed(
@@ -20,7 +17,6 @@ module {
     suppliers : List.List<Types.Supplier>,
     invoices : List.List<Types.Invoice>,
     bills : List.List<Types.Bill>,
-    transactions : List.List<Types.Transaction>,
     nextProductId : Nat,
     nextCustomerId : Nat,
     nextSupplierId : Nat,
@@ -28,7 +24,6 @@ module {
     nextInvoiceNumber : Nat,
     nextBillId : Nat,
     nextBillNumber : Nat,
-    nextTransactionId : Nat,
   ) : {
     nextProductId : Nat;
     nextCustomerId : Nat;
@@ -37,7 +32,6 @@ module {
     nextInvoiceNumber : Nat;
     nextBillId : Nat;
     nextBillNumber : Nat;
-    nextTransactionId : Nat;
   } {
     // ---- PRODUCTS ----
     // 9 products with realistic margins
@@ -413,7 +407,6 @@ module {
       nextInvoiceNumber = iNum;
       nextBillId = bId;
       nextBillNumber = bNum;
-      nextTransactionId;
     };
   };
 };

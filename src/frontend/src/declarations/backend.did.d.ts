@@ -130,6 +130,14 @@ export interface ExpenseSummary {
   'endDate' : Timestamp,
   'startDate' : Timestamp,
 }
+export interface ExtractedBillData {
+  'supplierName' : [] | [string],
+  'date' : [] | [string],
+  'invoiceNumber' : [] | [string],
+  'vatAmount' : [] | [number],
+  'confidence' : string,
+  'amount' : [] | [number],
+}
 export interface InvoiceLineItem {
   'lineTotal' : number,
   'productId' : bigint,
@@ -230,6 +238,7 @@ export interface _SERVICE {
   'createInvoice' : ActorMethod<[CreateInvoiceData], InvoiceShared>,
   'createProduct' : ActorMethod<[CreateProductData], ProductShared>,
   'createSupplier' : ActorMethod<[CreateSupplierData], Supplier>,
+  'extractPdfBillData' : ActorMethod<[string], ExtractedBillData>,
   'getAgedPayables' : ActorMethod<[], AgedReport>,
   'getAgedReceivables' : ActorMethod<[], AgedReport>,
   'getBill' : ActorMethod<[bigint], [] | [BillShared]>,
@@ -274,6 +283,7 @@ export interface _SERVICE {
     [] | [ProductShared]
   >,
   'updateSupplier' : ActorMethod<[bigint, CreateSupplierData], [] | [Supplier]>,
+  'uploadBillAttachment' : ActorMethod<[bigint, string], [] | [BillShared]>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

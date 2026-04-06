@@ -186,6 +186,16 @@ module {
     receiptFileId : ?Text;
   };
 
+  // PDF extraction result type
+  public type ExtractedBillData = {
+    supplierName : ?Text;
+    invoiceNumber : ?Text;
+    date : ?Text;
+    amount : ?Float;
+    vatAmount : ?Float;
+    confidence : Text; // "high" | "partial" | "failed"
+  };
+
   public type Transaction = {
     id : Nat;
     date : Common.Timestamp;

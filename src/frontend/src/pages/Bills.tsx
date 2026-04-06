@@ -17,16 +17,24 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useActor } from "@caffeineai/core-infrastructure";
 import {
+  AlertTriangle,
   ArrowUpDown,
+  Camera,
   CheckCircle2,
+  ExternalLink,
+  FileText,
+  Loader2,
   Pencil,
   Plus,
   RefreshCw,
+  Upload,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../backend";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import {
   useBills,
@@ -44,6 +52,8 @@ import {
   timestampToDate,
   vatRateToNumber,
 } from "../lib/format";
+import { getFileUrl, uploadFileToStorage } from "../lib/objectStorage";
+import { extractBillDataFromPdf } from "../lib/pdfExtract";
 import { BillCategory, BillStatus, VatRate } from "../types";
 import type {
   BillShared,
@@ -67,6 +77,19 @@ interface FormState {
   category: BillCategory;
   notes: string;
   linkedProductIds: string[];
+  receiptFileId?: string;
+}
+
+type AutoFilledField = "supplierName" | "date" | "amount" | "notes";
+
+interface PdfExtractionResult {
+  fileId: string;
+  supplierName?: string;
+  invoiceNumber?: string;
+  date?: string;
+  amount?: number;
+  vatAmount?: number;
+  confidence: "full" | "partial" | "failed";
 }
 
 const EMPTY_FORM: FormState = {
@@ -107,12 +130,24 @@ function toDateInput(ts: bigint): string {
   }
 }
 
+// ─── Auto-filled Badge ────────────────────────────────────────────────────────
+
+function AutoFilledBadge() {
+  return (
+    <span className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-600 border border-sky-200">
+      Auto-filled
+    </span>
+  );
+}
+
 // ─── Bill Form ────────────────────────────────────────────────────────────────
 
 interface BillFormProps {
   suppliers: Supplier[];
   products: ProductShared[];
   initial?: FormState;
+  autoFilled?: Set<AutoFilledField>;
+  pdfConfidence?: "full" | "partial" | "failed";
   onSubmit: (data: FormState) => void;
   onCancel: () => void;
   isSubmitting: boolean;
@@ -123,6 +158,8 @@ function BillForm({
   suppliers,
   products,
   initial = EMPTY_FORM,
+  autoFilled,
+  pdfConfidence,
   onSubmit,
   onCancel,
   isSubmitting,
@@ -161,11 +198,44 @@ function BillForm({
     onSubmit(form);
   };
 
+  const isAutoFilled = (field: AutoFilledField) => autoFilled?.has(field);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <DialogHeader>
         <DialogTitle className="font-display text-lg">{title}</DialogTitle>
       </DialogHeader>
+
+      {/* PDF extraction confidence banner */}
+      {pdfConfidence === "partial" && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-sm bg-yellow-50 border border-yellow-300 text-yellow-900">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-yellow-600" />
+          <span>
+            Some fields could not be extracted from the PDF. Please review and
+            complete the highlighted fields.
+          </span>
+        </div>
+      )}
+      {pdfConfidence === "failed" && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-sm bg-red-50 border border-red-300 text-red-900">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />
+          <span>
+            Could not extract data from this PDF (it may be scanned or
+            image-only). The PDF is saved — please fill in the details manually.
+          </span>
+        </div>
+      )}
+
+      {/* Attached PDF indicator */}
+      {form.receiptFileId && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-sky-50 border border-sky-200 text-sky-800">
+          <FileText className="w-4 h-4 shrink-0 text-sky-500" />
+          <span className="font-medium">PDF attached</span>
+          <span className="text-muted-foreground">
+            — will be saved with this bill
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Supplier */}
@@ -183,17 +253,29 @@ function BillForm({
               ))}
             </SelectContent>
           </Select>
+          {/* Extracted supplier name hint */}
+          {autoFilled?.has("supplierName") &&
+            form.supplierName &&
+            !form.supplierId && (
+              <p className="text-xs mt-1 text-sky-600">
+                Extracted supplier: <strong>{form.supplierName}</strong> —
+                select from list above
+              </p>
+            )}
         </div>
 
         {/* Date */}
         <div className="space-y-1.5">
-          <Label htmlFor="bill-date">Bill Date *</Label>
+          <Label htmlFor="bill-date" className="flex items-center">
+            Bill Date *{isAutoFilled("date") && <AutoFilledBadge />}
+          </Label>
           <Input
             id="bill-date"
             type="date"
             value={form.date}
             onChange={(e) => set("date", e.target.value)}
             data-ocid="bill-date-input"
+            className={isAutoFilled("date") ? "ring-1 ring-[#13B5EA]" : ""}
             required
           />
         </div>
@@ -213,7 +295,9 @@ function BillForm({
 
         {/* Amount */}
         <div className="space-y-1.5">
-          <Label htmlFor="bill-amount">Amount (ex. VAT) *</Label>
+          <Label htmlFor="bill-amount" className="flex items-center">
+            Amount (ex. VAT) *{isAutoFilled("amount") && <AutoFilledBadge />}
+          </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
               £
@@ -223,7 +307,7 @@ function BillForm({
               type="number"
               min="0"
               step="0.01"
-              className="pl-7"
+              className={`pl-7 ${isAutoFilled("amount") ? "ring-1 ring-[#13B5EA]" : ""}`}
               value={form.amount}
               onChange={(e) => set("amount", e.target.value)}
               data-ocid="bill-amount-input"
@@ -282,7 +366,10 @@ function BillForm({
 
         {/* Notes */}
         <div className="sm:col-span-2 space-y-1.5">
-          <Label htmlFor="bill-notes">Notes</Label>
+          <Label htmlFor="bill-notes" className="flex items-center">
+            Notes
+            {isAutoFilled("notes") && <AutoFilledBadge />}
+          </Label>
           <Textarea
             id="bill-notes"
             rows={2}
@@ -428,9 +515,32 @@ function SortButton({
   );
 }
 
+// ─── PDF Processing State Dialog ──────────────────────────────────────────────
+
+function PdfProcessingDialog({ fileName }: { fileName: string }) {
+  return (
+    <div className="flex flex-col items-center gap-4 py-6">
+      <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-sky-100">
+        <Loader2 className="w-7 h-7 animate-spin text-sky-500" />
+      </div>
+      <div className="text-center">
+        <p className="font-semibold text-foreground">
+          Extracting bill details…
+        </p>
+        <p className="text-sm text-muted-foreground mt-1 max-w-[260px] truncate">
+          {fileName}
+        </p>
+      </div>
+      <p className="text-xs text-muted-foreground text-center max-w-[280px]">
+        Uploading the PDF and reading invoice data. This may take a few seconds.
+      </p>
+    </div>
+  );
+}
+
 // ─── Bills Page ───────────────────────────────────────────────────────────────
 
-type ModalMode = "none" | "create" | "edit" | "pay";
+type ModalMode = "none" | "create" | "edit" | "pay" | "pdfProcessing";
 
 export function Bills() {
   const { data: bills = [], isLoading, isError, error, refetch } = useBills();
@@ -440,6 +550,7 @@ export function Bills() {
   const createBill = useCreateBill();
   const updateBill = useUpdateBill();
   const markPaid = useMarkBillPaid();
+  const { actor } = useActor(createActor);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -456,6 +567,19 @@ export function Bills() {
   const [modal, setModal] = useState<ModalMode>("none");
   const [editingBill, setEditingBill] = useState<BillShared | null>(null);
   const [payingBill, setPayingBill] = useState<BillShared | null>(null);
+
+  // PDF state
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [pdfFileName, setPdfFileName] = useState("");
+  const [pdfExtraction, setPdfExtraction] =
+    useState<PdfExtractionResult | null>(null);
+  const [createInitial, setCreateInitial] = useState<FormState | undefined>(
+    undefined,
+  );
+  const [autoFilledFields, setAutoFilledFields] = useState<
+    Set<AutoFilledField>
+  >(new Set());
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -539,7 +663,151 @@ export function Bills() {
       category: form.category,
       notes: form.notes,
       linkedProductIds: form.linkedProductIds.map(BigInt),
+      receiptFileId: form.receiptFileId,
     };
+  };
+
+  // ── Receipt photo (camera) handler ──────────────────────────────────────────
+  const handleCameraCapture = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPdfFileName(file.name || "receipt-photo");
+    setModal("pdfProcessing");
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+
+      let fileId: string;
+      try {
+        fileId = await uploadFileToStorage(bytes);
+      } catch {
+        toast.error(
+          "Failed to upload receipt — please try again or use manual entry",
+        );
+        setModal("none");
+        return;
+      }
+
+      // Camera capture is an image — no PDF text to extract, open the form with just the fileId
+      const prefilled: FormState = { ...EMPTY_FORM, receiptFileId: fileId };
+      setAutoFilledFields(new Set());
+      setCreateInitial(prefilled);
+      setPdfExtraction(null);
+      setModal("create");
+    } catch {
+      toast.error("Failed to process receipt photo");
+      setModal("none");
+    } finally {
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+    }
+  };
+
+  // ── PDF Upload Handler ───────────────────────────────────────────────────────
+  const handlePdfFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Please select a PDF file");
+      return;
+    }
+
+    setPdfFileName(file.name);
+    setModal("pdfProcessing");
+
+    try {
+      // 1. Read file
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+
+      // 2. Upload to object storage
+      let fileId: string;
+      try {
+        fileId = await uploadFileToStorage(bytes);
+      } catch {
+        toast.error(
+          "Failed to upload PDF — please try again or use manual entry",
+        );
+        setModal("none");
+        return;
+      }
+
+      // 3. Extract text data from the PDF (client-side)
+      const extracted = extractBillDataFromPdf(buffer);
+
+      // 4. Also call the backend extractPdfBillData with the extracted text
+      let finalExtracted = extracted;
+      if (actor) {
+        try {
+          const pdfText = new TextDecoder("latin1").decode(bytes);
+          const backendResult = await actor.extractPdfBillData(pdfText);
+          // Merge: prefer backend values when available
+          finalExtracted = {
+            supplierName: backendResult.supplierName ?? extracted.supplierName,
+            invoiceNumber:
+              backendResult.invoiceNumber ?? extracted.invoiceNumber,
+            date: backendResult.date ?? extracted.date,
+            amount: backendResult.amount ?? extracted.amount,
+            vatAmount: backendResult.vatAmount ?? extracted.vatAmount,
+            confidence:
+              (backendResult.confidence as "full" | "partial" | "failed") ??
+              extracted.confidence,
+          };
+        } catch {
+          // Backend extraction failed — use client-side result only
+        }
+      }
+
+      const result: PdfExtractionResult = {
+        fileId,
+        supplierName: finalExtracted.supplierName,
+        invoiceNumber: finalExtracted.invoiceNumber,
+        date: finalExtracted.date,
+        amount: finalExtracted.amount,
+        vatAmount: finalExtracted.vatAmount,
+        confidence: finalExtracted.confidence,
+      };
+      setPdfExtraction(result);
+
+      // 5. Build pre-filled form state
+      const autoFields = new Set<AutoFilledField>();
+      const prefilled: FormState = {
+        ...EMPTY_FORM,
+        receiptFileId: fileId,
+      };
+
+      if (finalExtracted.date) {
+        prefilled.date = finalExtracted.date;
+        autoFields.add("date");
+      }
+      if (finalExtracted.amount !== undefined) {
+        prefilled.amount = finalExtracted.amount.toString();
+        autoFields.add("amount");
+      }
+      if (finalExtracted.supplierName) {
+        prefilled.supplierName = finalExtracted.supplierName;
+        autoFields.add("supplierName");
+      }
+      if (finalExtracted.invoiceNumber) {
+        prefilled.notes = `Invoice #${finalExtracted.invoiceNumber}`;
+        autoFields.add("notes");
+      }
+
+      setAutoFilledFields(autoFields);
+      setCreateInitial(prefilled);
+      setModal("create");
+    } catch {
+      toast.error("Failed to process PDF");
+      setModal("none");
+    } finally {
+      // Reset input so same file can be re-selected
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+    }
   };
 
   const handleCreate = (form: FormState) => {
@@ -547,6 +815,9 @@ export function Bills() {
       onSuccess: () => {
         toast.success("Bill created");
         setModal("none");
+        setCreateInitial(undefined);
+        setAutoFilledFields(new Set());
+        setPdfExtraction(null);
       },
       onError: () => toast.error("Failed to create bill"),
     });
@@ -596,6 +867,9 @@ export function Bills() {
     setModal("none");
     setEditingBill(null);
     setPayingBill(null);
+    setCreateInitial(undefined);
+    setAutoFilledFields(new Set());
+    setPdfExtraction(null);
   };
 
   const editInitial: FormState | undefined = editingBill
@@ -611,6 +885,7 @@ export function Bills() {
         linkedProductIds: editingBill.linkedProductIds.map((id) =>
           id.toString(),
         ),
+        receiptFileId: editingBill.receiptFileId,
       }
     : undefined;
 
@@ -626,14 +901,61 @@ export function Bills() {
             Track supplier bills and outgoing payments
           </p>
         </div>
-        <Button
-          onClick={() => setModal("create")}
-          className="gap-1.5 shrink-0"
-          data-ocid="new-bill-btn"
-        >
-          <Plus className="w-4 h-4" />
-          New Bill
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Camera input (capture from device camera) */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleCameraCapture}
+            data-ocid="camera-capture-input"
+          />
+          {/* Camera button */}
+          <Button
+            variant="outline"
+            onClick={() => cameraInputRef.current?.click()}
+            className="gap-1.5"
+            aria-label="Photograph receipt"
+            data-ocid="camera-capture-btn"
+          >
+            <Camera className="w-4 h-4" />
+            <span className="hidden sm:inline">Scan Receipt</span>
+          </Button>
+          {/* PDF Upload button */}
+          <input
+            ref={pdfInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handlePdfFileChange}
+            data-ocid="pdf-upload-input"
+          />
+          <Button
+            variant="outline"
+            onClick={() => pdfInputRef.current?.click()}
+            className="gap-1.5 border-dashed border-sky-400 text-sky-600 hover:bg-sky-50"
+            data-ocid="pdf-upload-btn"
+          >
+            <Upload className="w-4 h-4" />
+            Upload PDF Bill
+          </Button>
+          {/* Manual new bill button */}
+          <Button
+            onClick={() => {
+              setCreateInitial(undefined);
+              setAutoFilledFields(new Set());
+              setPdfExtraction(null);
+              setModal("create");
+            }}
+            className="gap-1.5"
+            data-ocid="new-bill-btn"
+          >
+            <Plus className="w-4 h-4" />
+            New Bill
+          </Button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -919,6 +1241,16 @@ export function Bills() {
         </div>
       )}
 
+      {/* PDF Processing Dialog */}
+      <Dialog
+        open={modal === "pdfProcessing"}
+        onOpenChange={(o) => !o && setModal("none")}
+      >
+        <DialogContent className="max-w-sm" data-ocid="pdf-processing-dialog">
+          <PdfProcessingDialog fileName={pdfFileName} />
+        </DialogContent>
+      </Dialog>
+
       {/* Create Dialog */}
       <Dialog
         open={modal === "create"}
@@ -931,6 +1263,9 @@ export function Bills() {
           <BillForm
             suppliers={suppliers}
             products={products}
+            initial={createInitial ?? EMPTY_FORM}
+            autoFilled={autoFilledFields}
+            pdfConfidence={pdfExtraction?.confidence}
             onSubmit={handleCreate}
             onCancel={closeModal}
             isSubmitting={createBill.isPending}
@@ -994,6 +1329,26 @@ function BillRow({ bill, onEdit, onPay }: BillRowProps) {
   const canPay =
     bill.status === BillStatus.Unpaid || bill.status === BillStatus.Overdue;
   const isOverdue = bill.status === BillStatus.Overdue;
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+
+  const handleViewPdf = async () => {
+    if (!bill.receiptFileId) return;
+    if (pdfUrl) {
+      window.open(pdfUrl, "_blank");
+      return;
+    }
+    setLoadingPdf(true);
+    try {
+      const url = await getFileUrl(bill.receiptFileId);
+      setPdfUrl(url);
+      window.open(url, "_blank");
+    } catch {
+      toast.error("Could not load PDF — please try again");
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
 
   return (
     <tr
@@ -1002,6 +1357,14 @@ function BillRow({ bill, onEdit, onPay }: BillRowProps) {
     >
       <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
         {bill.billNumber}
+        {bill.receiptFileId && (
+          <span
+            className="ml-1.5 inline-flex items-center"
+            title="PDF attached"
+          >
+            <FileText className="w-3 h-3 text-sky-500" />
+          </span>
+        )}
       </td>
       <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap max-w-[160px] truncate">
         {bill.supplierName}
@@ -1028,6 +1391,24 @@ function BillRow({ bill, onEdit, onPay }: BillRowProps) {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-1">
+          {bill.receiptFileId && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs text-sky-500 hover:bg-blue-100 hover:text-sky-600"
+              onClick={handleViewPdf}
+              disabled={loadingPdf}
+              aria-label="View PDF"
+              data-ocid={`bill-view-pdf-btn-${bill.id}`}
+            >
+              {loadingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <ExternalLink className="w-3.5 h-3.5" />
+              )}
+              <span className="ml-1">PDF</span>
+            </Button>
+          )}
           {canPay && (
             <Button
               size="sm"

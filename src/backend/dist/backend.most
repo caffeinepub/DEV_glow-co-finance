@@ -1,4 +1,4 @@
-// Version: 1.0.0
+// Version: 3.0.0
 type BillCategory__433933747 =
   {
     #Ingredients;
@@ -69,6 +69,13 @@ type Invoice__476333655 =
     subtotal : Float;
     totalVat : Float
   };
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
 type Nat__490723111 = Nat__920180692;
 type Nat__920180692 = Nat;
 type Product__103108136 =
@@ -95,18 +102,19 @@ type Supplier__80618306 =
     phone : Text
   };
 type Timestamp__301639476 = Int;
-type TransactionType__430720328 = {#BillPayment; #InvoicePayment};
-type Transaction__367285679 =
+type Timestamp__817121181 = Int;
+type TransactionType__742351816 = {#BillPayment; #InvoicePayment};
+type Transaction__381777412 =
   {
     amount : Float;
-    date : Timestamp__301639476;
+    date : Timestamp__817121181;
     description : Text;
     id : Nat;
     referenceId : Nat;
-    transactionType : TransactionType__430720328
+    transactionType : TransactionType__742351816
   };
 type VatRate__839654455 = {#Five; #Twenty; #Zero};
-actor {
+actor ({
   stable bills :
     {
       var blockIndex : Nat__490723111;
@@ -132,7 +140,7 @@ actor {
   stable nextInvoiceNumber : [var Nat];
   stable nextProductId : [var Nat];
   stable nextSupplierId : [var Nat];
-  stable nextTransactionId : [var Nat];
+  in nextTransactionId : [var Nat];
   stable products :
     {
       var blockIndex : Nat__490723111;
@@ -145,10 +153,43 @@ actor {
       var blocks : [var [var ?Supplier__80618306]];
       var elementIndex : Nat__490723111
     };
-  stable transactions :
+  in transactions : List__415060402<Transaction__381777412>
+}, {
+  stable bills :
     {
       var blockIndex : Nat__490723111;
-      var blocks : [var [var ?Transaction__367285679]];
+      var blocks : [var [var ?Bill__80149537]];
+      var elementIndex : Nat__490723111
+    };
+  stable customers :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Customer__13177882]];
+      var elementIndex : Nat__490723111
+    };
+  stable invoices :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Invoice__476333655]];
+      var elementIndex : Nat__490723111
+    };
+  stable nextBillId : [var Nat];
+  stable nextBillNumber : [var Nat];
+  stable nextCustomerId : [var Nat];
+  stable nextInvoiceId : [var Nat];
+  stable nextInvoiceNumber : [var Nat];
+  stable nextProductId : [var Nat];
+  stable nextSupplierId : [var Nat];
+  stable products :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Product__103108136]];
+      var elementIndex : Nat__490723111
+    };
+  stable suppliers :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Supplier__80618306]];
       var elementIndex : Nat__490723111
     }
-};
+}) ;

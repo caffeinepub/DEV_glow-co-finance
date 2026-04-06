@@ -7,16 +7,66 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export interface InvoiceLineItem {
-    lineTotal: number;
-    productId: bigint;
-    productName: string;
-    quantity: bigint;
-    unitPrice: number;
-    vatAmount: number;
-    vatRate: VatRate;
+export interface ExpenseSummary {
+    categories: Array<ExpenseCategory>;
+    total: number;
+    endDate: Timestamp;
+    startDate: Timestamp;
 }
 export type Timestamp = bigint;
+export interface ProductShared {
+    id: bigint;
+    sku: string;
+    stockQuantity: bigint;
+    reorderPoint: bigint;
+    name: string;
+    description: string;
+    salePrice: number;
+    margin: number;
+    costPrice: number;
+}
+export interface MonthlySummary {
+    month: bigint;
+    revenue: number;
+    expenses: number;
+    year: bigint;
+    topCustomers: Array<[string, number]>;
+    topExpenseCategories: Array<[string, number]>;
+    profit: number;
+}
+export interface MonthlyCashFlow {
+    month: bigint;
+    netFlow: number;
+    year: bigint;
+    inflow: number;
+    runningBalance: number;
+    outflow: number;
+}
+export interface CreateInvoiceData {
+    issueDate: Timestamp;
+    customerName: string;
+    lineItems: Array<InvoiceLineItem>;
+    isRecurring: boolean;
+    dueDate: Timestamp;
+    totalVat: number;
+    grandTotal: number;
+    notes: string;
+    customerId: bigint;
+    recurringFrequency?: RecurringFrequency;
+    subtotal: number;
+}
+export interface VatSummary {
+    quarter: bigint;
+    year: bigint;
+    vatCollected: number;
+    netVatOwed: number;
+    vatPaid: number;
+}
+export interface AgedBucket {
+    title: string;
+    total: number;
+    count: bigint;
+}
 export interface InvoiceShared {
     id: bigint;
     issueDate: Timestamp;
@@ -58,17 +108,6 @@ export interface ExpenseCategory {
     prevAmount: number;
     flagged: boolean;
 }
-export interface ProductShared {
-    id: bigint;
-    sku: string;
-    stockQuantity: bigint;
-    reorderPoint: bigint;
-    name: string;
-    description: string;
-    salePrice: number;
-    margin: number;
-    costPrice: number;
-}
 export interface CreateSupplierData {
     name: string;
     email: string;
@@ -77,22 +116,13 @@ export interface CreateSupplierData {
     category: BillCategory;
     phone: string;
 }
-export interface MonthlySummary {
-    month: bigint;
-    revenue: number;
-    expenses: number;
-    year: bigint;
-    topCustomers: Array<[string, number]>;
-    topExpenseCategories: Array<[string, number]>;
-    profit: number;
-}
-export interface MonthlyCashFlow {
-    month: bigint;
-    netFlow: number;
-    year: bigint;
-    inflow: number;
-    runningBalance: number;
-    outflow: number;
+export interface ExtractedBillData {
+    supplierName?: string;
+    date?: string;
+    invoiceNumber?: string;
+    vatAmount?: number;
+    confidence: string;
+    amount?: number;
 }
 export interface DashboardStats {
     overdueInvoices: Array<InvoiceShared>;
@@ -121,19 +151,6 @@ export interface CreateProductData {
     salePrice: number;
     costPrice: number;
 }
-export interface CreateInvoiceData {
-    issueDate: Timestamp;
-    customerName: string;
-    lineItems: Array<InvoiceLineItem>;
-    isRecurring: boolean;
-    dueDate: Timestamp;
-    totalVat: number;
-    grandTotal: number;
-    notes: string;
-    customerId: bigint;
-    recurringFrequency?: RecurringFrequency;
-    subtotal: number;
-}
 export interface BillShared {
     id: bigint;
     status: BillStatus;
@@ -151,13 +168,6 @@ export interface BillShared {
     supplierId: bigint;
     vatRate: VatRate;
 }
-export interface VatSummary {
-    quarter: bigint;
-    year: bigint;
-    vatCollected: number;
-    netVatOwed: number;
-    vatPaid: number;
-}
 export interface CreateCustomerData {
     customerType: CustomerType;
     name: string;
@@ -165,11 +175,6 @@ export interface CreateCustomerData {
     address: string;
     notes: string;
     phone: string;
-}
-export interface AgedBucket {
-    title: string;
-    total: number;
-    count: bigint;
 }
 export interface CreateBillData {
     supplierName: string;
@@ -193,11 +198,14 @@ export interface Supplier {
     category: BillCategory;
     phone: string;
 }
-export interface ExpenseSummary {
-    categories: Array<ExpenseCategory>;
-    total: number;
-    endDate: Timestamp;
-    startDate: Timestamp;
+export interface InvoiceLineItem {
+    lineTotal: number;
+    productId: bigint;
+    productName: string;
+    quantity: bigint;
+    unitPrice: number;
+    vatAmount: number;
+    vatRate: VatRate;
 }
 export enum BillCategory {
     Shipping = "Shipping",
@@ -239,6 +247,7 @@ export interface backendInterface {
     createInvoice(data: CreateInvoiceData): Promise<InvoiceShared>;
     createProduct(data: CreateProductData): Promise<ProductShared>;
     createSupplier(data: CreateSupplierData): Promise<Supplier>;
+    extractPdfBillData(pdfText: string): Promise<ExtractedBillData>;
     getAgedPayables(): Promise<AgedReport>;
     getAgedReceivables(): Promise<AgedReport>;
     getBill(id: bigint): Promise<BillShared | null>;
@@ -277,4 +286,5 @@ export interface backendInterface {
     updateInvoice(id: bigint, data: CreateInvoiceData): Promise<InvoiceShared | null>;
     updateProduct(id: bigint, data: CreateProductData): Promise<ProductShared | null>;
     updateSupplier(id: bigint, data: CreateSupplierData): Promise<Supplier | null>;
+    uploadBillAttachment(billId: bigint, fileId: string): Promise<BillShared | null>;
 }

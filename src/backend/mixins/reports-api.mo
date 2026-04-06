@@ -2,17 +2,15 @@ import Types "../types/finance";
 import Common "../types/common";
 import ReportsLib "../lib/reports";
 import List "mo:core/List";
-import Runtime "mo:core/Runtime";
 import Time "mo:core/Time";
 
 mixin (
   invoices : List.List<Types.Invoice>,
   bills : List.List<Types.Bill>,
   products : List.List<Types.Product>,
-  transactions : List.List<Types.Transaction>,
 ) {
   public query func getDashboardStats() : async Types.DashboardStats {
-    ReportsLib.buildDashboardStats(invoices, bills, products, transactions, Time.now());
+    ReportsLib.buildDashboardStats(invoices, bills, products, Time.now());
   };
 
   public query func getProfitAndLoss(startDate : Common.Timestamp, endDate : Common.Timestamp) : async Types.ProfitAndLossReport {

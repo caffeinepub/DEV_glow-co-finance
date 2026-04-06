@@ -118,6 +118,15 @@ type InvoiceLineItem =
    vatAmount: float64;
    vatRate: VatRate;
  };
+type ExtractedBillData = 
+ record {
+   amount: opt float64;
+   confidence: text;
+   date: opt text;
+   invoiceNumber: opt text;
+   supplierName: opt text;
+   vatAmount: opt float64;
+ };
 type ExpenseSummary = 
  record {
    categories: vec ExpenseCategory;
@@ -265,6 +274,7 @@ service : {
   createInvoice: (data: CreateInvoiceData) -> (InvoiceShared);
   createProduct: (data: CreateProductData) -> (ProductShared);
   createSupplier: (data: CreateSupplierData) -> (Supplier);
+  extractPdfBillData: (pdfText: text) -> (ExtractedBillData) query;
   getAgedPayables: () -> (AgedReport) query;
   getAgedReceivables: () -> (AgedReport) query;
   getBill: (id: nat) -> (opt BillShared) query;
@@ -308,4 +318,5 @@ service : {
   updateInvoice: (id: nat, data: CreateInvoiceData) -> (opt InvoiceShared);
   updateProduct: (id: nat, data: CreateProductData) -> (opt ProductShared);
   updateSupplier: (id: nat, data: CreateSupplierData) -> (opt Supplier);
+  uploadBillAttachment: (billId: nat, fileId: text) -> (opt BillShared);
 }

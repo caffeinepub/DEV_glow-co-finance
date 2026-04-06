@@ -2,7 +2,6 @@ import Types "../types/finance";
 import Common "../types/common";
 import BillsLib "../lib/bills";
 import List "mo:core/List";
-import Runtime "mo:core/Runtime";
 
 mixin (
   bills : List.List<Types.Bill>,
@@ -35,5 +34,19 @@ mixin (
 
   public func markBillPaid(id : Nat, paidDate : Common.Timestamp) : async ?Types.BillShared {
     BillsLib.markBillPaid(bills, id, paidDate);
+  };
+
+  /// Associate an uploaded file (by its object-storage file ID) with an existing bill.
+  /// The frontend uploads the file via object-storage and then calls this with the returned fileId.
+  public func uploadBillAttachment(billId : Nat, fileId : Text) : async ?Types.BillShared {
+    BillsLib.attachFileToBill(bills, billId, fileId);
+  };
+
+  /// Accept plain text extracted from a PDF on the frontend and parse it for bill fields.
+  /// The frontend is responsible for reading the PDF bytes (via object-storage) and
+  /// converting them to text (e.g., with pdf.js). The backend applies pattern-matching
+  /// extraction and returns structured data with a confidence score.
+  public query func extractPdfBillData(pdfText : Text) : async Types.ExtractedBillData {
+    BillsLib.extractBillDataFromText(pdfText);
   };
 };
