@@ -38,7 +38,7 @@ export function useDashboardStats() {
       return actor.getDashboardStats();
     },
     enabled: !!actor && !isFetching,
-    refetchInterval: 30_000,
+    refetchInterval: 300_000,
   });
 }
 
@@ -51,6 +51,8 @@ export function useInvoices() {
       return actor.getInvoices();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
   });
 }
 
@@ -63,6 +65,7 @@ export function useInvoice(id: bigint | null) {
       return actor.getInvoice(id);
     },
     enabled: !!actor && !isFetching && id !== null,
+    staleTime: 300_000,
   });
 }
 
@@ -75,6 +78,8 @@ export function useBills() {
       return actor.getBills();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
   });
 }
 
@@ -87,6 +92,7 @@ export function useBill(id: bigint | null) {
       return actor.getBill(id);
     },
     enabled: !!actor && !isFetching && id !== null,
+    staleTime: 300_000,
   });
 }
 
@@ -99,6 +105,8 @@ export function useProducts() {
       return actor.getProducts();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
   });
 }
 
@@ -111,6 +119,7 @@ export function useProduct(id: bigint | null) {
       return actor.getProduct(id);
     },
     enabled: !!actor && !isFetching && id !== null,
+    staleTime: 300_000,
   });
 }
 
@@ -123,6 +132,8 @@ export function useCustomers() {
       return actor.getCustomers();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
   });
 }
 
@@ -135,54 +146,66 @@ export function useSuppliers() {
       return actor.getSuppliers();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
   });
 }
 
 export function useProfitAndLoss(startDate: Timestamp, endDate: Timestamp) {
   const { actor, isFetching } = useBackendActor();
-  return useQuery<ProfitAndLossReport>({
+  return useQuery<ProfitAndLossReport | null>({
     queryKey: ["profitAndLoss", startDate.toString(), endDate.toString()],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
+      if (!actor) return null;
       return actor.getProfitAndLoss(startDate, endDate);
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    retry: false,
   });
 }
 
 export function useExpenseSummary(startDate: Timestamp, endDate: Timestamp) {
   const { actor, isFetching } = useBackendActor();
-  return useQuery<ExpenseSummary>({
+  return useQuery<ExpenseSummary | null>({
     queryKey: ["expenseSummary", startDate.toString(), endDate.toString()],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
+      if (!actor) return null;
       return actor.getExpenseSummary(startDate, endDate);
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    retry: false,
   });
 }
 
 export function useAgedReceivables() {
   const { actor, isFetching } = useBackendActor();
-  return useQuery<AgedReport>({
+  return useQuery<AgedReport | null>({
     queryKey: ["agedReceivables"],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
+      if (!actor) return null;
       return actor.getAgedReceivables();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
+    retry: false,
   });
 }
 
 export function useAgedPayables() {
   const { actor, isFetching } = useBackendActor();
-  return useQuery<AgedReport>({
+  return useQuery<AgedReport | null>({
     queryKey: ["agedPayables"],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
+      if (!actor) return null;
       return actor.getAgedPayables();
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    refetchInterval: 300_000,
+    retry: false,
   });
 }
 
@@ -195,30 +218,36 @@ export function useCashFlow(year: bigint) {
       return actor.getCashFlow(year);
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    retry: false,
   });
 }
 
 export function useMonthlySummary(month: bigint, year: bigint) {
   const { actor, isFetching } = useBackendActor();
-  return useQuery<MonthlySummary>({
+  return useQuery<MonthlySummary | null>({
     queryKey: ["monthlySummary", month.toString(), year.toString()],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
+      if (!actor) return null;
       return actor.getMonthlySummary(month, year);
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    retry: false,
   });
 }
 
 export function useVatSummary(quarter: bigint, year: bigint) {
   const { actor, isFetching } = useBackendActor();
-  return useQuery<VatSummary>({
+  return useQuery<VatSummary | null>({
     queryKey: ["vatSummary", quarter.toString(), year.toString()],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
+      if (!actor) return null;
       return actor.getVatSummary(quarter, year);
     },
     enabled: !!actor && !isFetching,
+    staleTime: 300_000,
+    retry: false,
   });
 }
 
