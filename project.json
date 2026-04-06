@@ -1,0 +1,27 @@
+{
+  "overview": "A full business finance dashboard for Glow & Co., a UK beauty brand. Manage invoices, bills, inventory, expenses, VAT, contacts, and reports all in one place — with pre-populated sample data for a realistic beauty brand setup.",
+  "features": [
+    "Dashboard with live KPIs, charts, overdue invoices and low-stock alerts",
+    "Invoice management with branding, line items, VAT, statuses, and recurring templates",
+    "Bills & receipts tracking with categories, statuses, and file uploads",
+    "Profit & Loss reports with period comparison and PDF export",
+    "Inventory management with automatic stock reduction and low-stock alerts",
+    "Expense breakdown by category with trend charts and 20% spike flags",
+    "Contacts directory for customers and suppliers with history",
+    "Aged receivables/payables and cash flow reports",
+    "VAT tracking with quarterly summaries",
+    "Pre-populated sample data for 9 beauty products, 15 customers, and 6 months of transactions"
+  ],
+  "category": "productivity",
+  "tags": [
+    "finance",
+    "dashboard",
+    "invoices",
+    "inventory",
+    "vat",
+    "beauty",
+    "uk",
+    "business"
+  ],
+  "last_updated": "2026-04-05T21:00:05.459Z"
+}

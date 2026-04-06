@@ -1,0 +1,311 @@
+type VatSummary = 
+ record {
+   netVatOwed: float64;
+   quarter: nat;
+   vatCollected: float64;
+   vatPaid: float64;
+   year: nat;
+ };
+type VatRate = 
+ variant {
+   Five;
+   Twenty;
+   Zero;
+ };
+type Timestamp = int;
+type Supplier = 
+ record {
+   address: text;
+   category: BillCategory;
+   email: text;
+   id: nat;
+   name: text;
+   notes: text;
+   phone: text;
+ };
+type RecurringFrequency = 
+ variant {
+   Monthly;
+   Weekly;
+ };
+type ProfitAndLossReport = 
+ record {
+   cogs: float64;
+   endDate: Timestamp;
+   expensesByCategory: vec record {
+                             text;
+                             float64;
+                           };
+   grossProfit: float64;
+   netProfit: float64;
+   prevCogs: float64;
+   prevGrossProfit: float64;
+   prevNetProfit: float64;
+   prevRevenue: float64;
+   revenue: float64;
+   startDate: Timestamp;
+   totalExpenses: float64;
+ };
+type ProductShared = 
+ record {
+   costPrice: float64;
+   description: text;
+   id: nat;
+   margin: float64;
+   name: text;
+   reorderPoint: nat;
+   salePrice: float64;
+   sku: text;
+   stockQuantity: nat;
+ };
+type MonthlySummary = 
+ record {
+   expenses: float64;
+   month: nat;
+   profit: float64;
+   revenue: float64;
+   topCustomers: vec record {
+                       text;
+                       float64;
+                     };
+   topExpenseCategories: vec record {
+                               text;
+                               float64;
+                             };
+   year: nat;
+ };
+type MonthlyCashFlow = 
+ record {
+   inflow: float64;
+   month: nat;
+   netFlow: float64;
+   outflow: float64;
+   runningBalance: float64;
+   year: nat;
+ };
+type InvoiceStatus = 
+ variant {
+   Draft;
+   Overdue;
+   Paid;
+   Sent;
+ };
+type InvoiceShared = 
+ record {
+   customerId: nat;
+   customerName: text;
+   dueDate: Timestamp;
+   grandTotal: float64;
+   id: nat;
+   invoiceNumber: text;
+   isRecurring: bool;
+   issueDate: Timestamp;
+   lineItems: vec InvoiceLineItem;
+   notes: text;
+   paidDate: opt Timestamp;
+   recurringFrequency: opt RecurringFrequency;
+   status: InvoiceStatus;
+   subtotal: float64;
+   totalVat: float64;
+ };
+type InvoiceLineItem = 
+ record {
+   lineTotal: float64;
+   productId: nat;
+   productName: text;
+   quantity: nat;
+   unitPrice: float64;
+   vatAmount: float64;
+   vatRate: VatRate;
+ };
+type ExpenseSummary = 
+ record {
+   categories: vec ExpenseCategory;
+   endDate: Timestamp;
+   startDate: Timestamp;
+   total: float64;
+ };
+type ExpenseCategory = 
+ record {
+   amount: float64;
+   category: text;
+   flagged: bool;
+   prevAmount: float64;
+ };
+type DashboardStats = 
+ record {
+   billsDueIn14Days: vec BillShared;
+   expensesThisMonth: float64;
+   lowStockProducts: vec ProductShared;
+   netProfitThisMonth: float64;
+   overdueInvoices: vec InvoiceShared;
+   revenueThisMonth: float64;
+   totalCashBalance: float64;
+ };
+type CustomerType = 
+ variant {
+   DTC;
+   Wholesale;
+ };
+type Customer = 
+ record {
+   address: text;
+   customerType: CustomerType;
+   email: text;
+   id: nat;
+   name: text;
+   notes: text;
+   phone: text;
+ };
+type CreateSupplierData = 
+ record {
+   address: text;
+   category: BillCategory;
+   email: text;
+   name: text;
+   notes: text;
+   phone: text;
+ };
+type CreateProductData = 
+ record {
+   costPrice: float64;
+   description: text;
+   name: text;
+   reorderPoint: nat;
+   salePrice: float64;
+   sku: text;
+   stockQuantity: nat;
+ };
+type CreateInvoiceData = 
+ record {
+   customerId: nat;
+   customerName: text;
+   dueDate: Timestamp;
+   grandTotal: float64;
+   isRecurring: bool;
+   issueDate: Timestamp;
+   lineItems: vec InvoiceLineItem;
+   notes: text;
+   recurringFrequency: opt RecurringFrequency;
+   subtotal: float64;
+   totalVat: float64;
+ };
+type CreateCustomerData = 
+ record {
+   address: text;
+   customerType: CustomerType;
+   email: text;
+   name: text;
+   notes: text;
+   phone: text;
+ };
+type CreateBillData = 
+ record {
+   amount: float64;
+   category: BillCategory;
+   date: Timestamp;
+   dueDate: Timestamp;
+   linkedProductIds: vec nat;
+   notes: text;
+   receiptFileId: opt text;
+   supplierId: nat;
+   supplierName: text;
+   vatAmount: float64;
+   vatRate: VatRate;
+ };
+type BillStatus = 
+ variant {
+   Overdue;
+   Paid;
+   Unpaid;
+ };
+type BillShared = 
+ record {
+   amount: float64;
+   billNumber: text;
+   category: BillCategory;
+   date: Timestamp;
+   dueDate: Timestamp;
+   id: nat;
+   linkedProductIds: vec nat;
+   notes: text;
+   paidDate: opt Timestamp;
+   receiptFileId: opt text;
+   status: BillStatus;
+   supplierId: nat;
+   supplierName: text;
+   vatAmount: float64;
+   vatRate: VatRate;
+ };
+type BillCategory = 
+ variant {
+   Ingredients;
+   Marketing;
+   Other;
+   Packaging;
+   ProfessionalServices;
+   Rent;
+   Shipping;
+   Software;
+ };
+type AgedReport = 
+ record {
+   buckets: vec AgedBucket;
+   grandTotal: float64;
+ };
+type AgedBucket = 
+ record {
+   count: nat;
+   title: text;
+   total: float64;
+ };
+service : {
+  createBill: (data: CreateBillData) -> (BillShared);
+  createCustomer: (data: CreateCustomerData) -> (Customer);
+  createInvoice: (data: CreateInvoiceData) -> (InvoiceShared);
+  createProduct: (data: CreateProductData) -> (ProductShared);
+  createSupplier: (data: CreateSupplierData) -> (Supplier);
+  getAgedPayables: () -> (AgedReport) query;
+  getAgedReceivables: () -> (AgedReport) query;
+  getBill: (id: nat) -> (opt BillShared) query;
+  getBills: () -> (vec BillShared) query;
+  getCashFlow: (year: nat) -> (vec MonthlyCashFlow) query;
+  getCustomer: (id: nat) -> (opt Customer) query;
+  getCustomerInvoiceHistory: (customerId: nat) ->
+   (record {
+      invoices: vec InvoiceShared;
+      outstandingBalance: float64;
+    }) query;
+  getCustomers: () -> (vec Customer) query;
+  getDashboardStats: () -> (DashboardStats) query;
+  getExpenseSummary: (startDate: Timestamp, endDate: Timestamp) ->
+   (ExpenseSummary) query;
+  getInventoryStats: () ->
+   (record {
+      totalAtCost: float64;
+      totalAtSale: float64;
+    }) query;
+  getInvoice: (id: nat) -> (opt InvoiceShared) query;
+  getInvoices: () -> (vec InvoiceShared) query;
+  getMonthlySummary: (month: nat, year: nat) -> (MonthlySummary) query;
+  getProduct: (id: nat) -> (opt ProductShared) query;
+  getProducts: () -> (vec ProductShared) query;
+  getProfitAndLoss: (startDate: Timestamp, endDate: Timestamp) ->
+   (ProfitAndLossReport) query;
+  getSupplier: (id: nat) -> (opt Supplier) query;
+  getSupplierBillHistory: (supplierId: nat) ->
+   (record {
+      bills: vec BillShared;
+      outstandingBalance: float64;
+    }) query;
+  getSuppliers: () -> (vec Supplier) query;
+  getVatSummary: (quarter: nat, year: nat) -> (VatSummary) query;
+  initializeSampleData: () -> (bool);
+  markBillPaid: (id: nat, paidDate: Timestamp) -> (opt BillShared);
+  markInvoicePaid: (id: nat, paidDate: Timestamp) -> (opt InvoiceShared);
+  updateBill: (id: nat, data: CreateBillData) -> (opt BillShared);
+  updateCustomer: (id: nat, data: CreateCustomerData) -> (opt Customer);
+  updateInvoice: (id: nat, data: CreateInvoiceData) -> (opt InvoiceShared);
+  updateProduct: (id: nat, data: CreateProductData) -> (opt ProductShared);
+  updateSupplier: (id: nat, data: CreateSupplierData) -> (opt Supplier);
+}

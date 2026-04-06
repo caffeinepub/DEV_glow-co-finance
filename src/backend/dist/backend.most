@@ -1,0 +1,154 @@
+// Version: 1.0.0
+type BillCategory__433933747 =
+  {
+    #Ingredients;
+    #Marketing;
+    #Other;
+    #Packaging;
+    #ProfessionalServices;
+    #Rent;
+    #Shipping;
+    #Software
+  };
+type BillStatus__488604250 = {#Overdue; #Paid; #Unpaid};
+type Bill__80149537 =
+  {
+    amount : Float;
+    billNumber : Text;
+    category : BillCategory__433933747;
+    date : Timestamp__301639476;
+    dueDate : Timestamp__301639476;
+    id : Nat;
+    linkedProductIds : [Nat];
+    notes : Text;
+    var paidDate : ?Timestamp__301639476;
+    receiptFileId : ?Text;
+    var status : BillStatus__488604250;
+    supplierId : Nat;
+    supplierName : Text;
+    vatAmount : Float;
+    vatRate : VatRate__839654455
+  };
+type CustomerType__409710665 = {#DTC; #Wholesale};
+type Customer__13177882 =
+  {
+    address : Text;
+    customerType : CustomerType__409710665;
+    email : Text;
+    id : Nat;
+    name : Text;
+    notes : Text;
+    phone : Text
+  };
+type InvoiceLineItem__501973514 =
+  {
+    lineTotal : Float;
+    productId : Nat;
+    productName : Text;
+    quantity : Nat;
+    unitPrice : Float;
+    vatAmount : Float;
+    vatRate : VatRate__839654455
+  };
+type InvoiceStatus__932546339 = {#Draft; #Overdue; #Paid; #Sent};
+type Invoice__476333655 =
+  {
+    customerId : Nat;
+    customerName : Text;
+    dueDate : Timestamp__301639476;
+    grandTotal : Float;
+    id : Nat;
+    invoiceNumber : Text;
+    isRecurring : Bool;
+    issueDate : Timestamp__301639476;
+    lineItems : [InvoiceLineItem__501973514];
+    notes : Text;
+    var paidDate : ?Timestamp__301639476;
+    recurringFrequency : ?RecurringFrequency__152158519;
+    var status : InvoiceStatus__932546339;
+    subtotal : Float;
+    totalVat : Float
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Product__103108136 =
+  {
+    costPrice : Float;
+    description : Text;
+    id : Nat;
+    margin : Float;
+    name : Text;
+    reorderPoint : Nat;
+    salePrice : Float;
+    sku : Text;
+    var stockQuantity : Nat
+  };
+type RecurringFrequency__152158519 = {#Monthly; #Weekly};
+type Supplier__80618306 =
+  {
+    address : Text;
+    category : BillCategory__433933747;
+    email : Text;
+    id : Nat;
+    name : Text;
+    notes : Text;
+    phone : Text
+  };
+type Timestamp__301639476 = Int;
+type TransactionType__430720328 = {#BillPayment; #InvoicePayment};
+type Transaction__367285679 =
+  {
+    amount : Float;
+    date : Timestamp__301639476;
+    description : Text;
+    id : Nat;
+    referenceId : Nat;
+    transactionType : TransactionType__430720328
+  };
+type VatRate__839654455 = {#Five; #Twenty; #Zero};
+actor {
+  stable bills :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Bill__80149537]];
+      var elementIndex : Nat__490723111
+    };
+  stable customers :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Customer__13177882]];
+      var elementIndex : Nat__490723111
+    };
+  stable invoices :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Invoice__476333655]];
+      var elementIndex : Nat__490723111
+    };
+  stable nextBillId : [var Nat];
+  stable nextBillNumber : [var Nat];
+  stable nextCustomerId : [var Nat];
+  stable nextInvoiceId : [var Nat];
+  stable nextInvoiceNumber : [var Nat];
+  stable nextProductId : [var Nat];
+  stable nextSupplierId : [var Nat];
+  stable nextTransactionId : [var Nat];
+  stable products :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Product__103108136]];
+      var elementIndex : Nat__490723111
+    };
+  stable suppliers :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Supplier__80618306]];
+      var elementIndex : Nat__490723111
+    };
+  stable transactions :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Transaction__367285679]];
+      var elementIndex : Nat__490723111
+    }
+};
