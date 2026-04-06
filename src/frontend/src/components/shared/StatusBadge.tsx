@@ -12,7 +12,7 @@ function getStatusStyle(status: string): string {
     case "Draft":
       return "bg-muted/60 text-muted-foreground border border-border";
     case "Sent":
-      return "bg-[oklch(0.7_0.17_195/0.15)] text-[oklch(0.7_0.17_195)] border border-[oklch(0.7_0.17_195/0.3)]";
+      return "bg-primary/10 text-primary border border-primary/30";
     case "Paid":
       return "badge-success";
     case "Overdue":

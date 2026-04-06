@@ -36,9 +36,7 @@ export function StatCard({
             <span
               className={cn(
                 "inline-flex items-center gap-1 text-xs font-semibold",
-                trendPositive
-                  ? "text-[oklch(var(--success))]"
-                  : "text-destructive",
+                trendPositive ? "text-success" : "text-destructive",
               )}
             >
               {trendPositive ? (

@@ -352,19 +352,16 @@ function CashFlowTab() {
                 data={chartData}
                 margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="oklch(0.28 0.02 260)"
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
                 <XAxis
                   dataKey="month"
-                  tick={{ fill: "oklch(0.55 0.01 260)", fontSize: 12 }}
+                  tick={{ fill: "#8C8C8C", fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   yAxisId="bars"
-                  tick={{ fill: "oklch(0.55 0.01 260)", fontSize: 11 }}
+                  tick={{ fill: "#8C8C8C", fontSize: 11 }}
                   tickFormatter={(v: number) => `£${(v / 1000).toFixed(0)}k`}
                   axisLine={false}
                   tickLine={false}
@@ -372,34 +369,32 @@ function CashFlowTab() {
                 <YAxis
                   yAxisId="line"
                   orientation="right"
-                  tick={{ fill: "oklch(0.55 0.01 260)", fontSize: 11 }}
+                  tick={{ fill: "#8C8C8C", fontSize: 11 }}
                   tickFormatter={(v: number) => `£${(v / 1000).toFixed(0)}k`}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip content={<CashFlowTooltip />} />
-                <Legend
-                  wrapperStyle={{ fontSize: 12, color: "oklch(0.55 0.01 260)" }}
-                />
+                <Legend wrapperStyle={{ fontSize: 12, color: "#8C8C8C" }} />
                 <Bar
                   yAxisId="bars"
                   dataKey="Cash In"
-                  fill="oklch(0.6 0.16 150)"
+                  fill="#13B5EA"
                   radius={[4, 4, 0, 0]}
                 />
                 <Bar
                   yAxisId="bars"
                   dataKey="Cash Out"
-                  fill="oklch(0.55 0.22 25)"
+                  fill="#8C8C8C"
                   radius={[4, 4, 0, 0]}
                 />
                 <Line
                   yAxisId="line"
                   type="monotone"
                   dataKey="Running Balance"
-                  stroke="oklch(0.72 0.15 85)"
+                  stroke="#3DCD7B"
                   strokeWidth={2}
-                  dot={{ fill: "oklch(0.72 0.15 85)", r: 3 }}
+                  dot={{ fill: "#3DCD7B", r: 3 }}
                 />
               </ComposedChart>
             </ResponsiveContainer>

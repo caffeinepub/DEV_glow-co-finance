@@ -9,93 +9,50 @@
     --font-mono: "JetBrains Mono";
     --radius: 0.625rem;
 
-    --background: 0.14 0.02 260;
-    --foreground: 0.92 0.01 260;
-    --card: 0.18 0.025 260;
-    --card-foreground: 0.92 0.01 260;
-    --popover: 0.22 0.02 260;
-    --popover-foreground: 0.92 0.01 260;
+    /* Xero Light Palette */
+    --background: #ffffff;
+    --foreground: #333333;
+    --card: #f4f5f7;
+    --card-foreground: #333333;
+    --popover: #ffffff;
+    --popover-foreground: #333333;
 
-    --primary: 0.55 0.18 145;
-    --primary-foreground: 0.14 0.02 145;
+    --primary: #13b5ea;
+    --primary-foreground: #ffffff;
 
-    --secondary: 0.22 0.02 260;
-    --secondary-foreground: 0.85 0.01 260;
-    --muted: 0.22 0.02 260;
-    --muted-foreground: 0.55 0.01 260;
+    --secondary: #f4f5f7;
+    --secondary-foreground: #333333;
+    --muted: #f4f5f7;
+    --muted-foreground: #8c8c8c;
 
-    --accent: 0.72 0.14 85;
-    --accent-foreground: 0.14 0.02 85;
+    --accent: #13b5ea;
+    --accent-foreground: #ffffff;
 
-    --destructive: 0.55 0.22 25;
-    --destructive-foreground: 0.92 0.01 25;
+    --destructive: #e34040;
+    --destructive-foreground: #ffffff;
 
-    --success: 0.6 0.16 150;
-    --warning: 0.72 0.15 85;
+    --success: #3dcd7b;
+    --warning: #f5a623;
 
-    --border: 0.28 0.02 260;
-    --input: 0.28 0.02 260;
-    --ring: 0.55 0.18 145;
+    --border: #e0e0e0;
+    --input: #e0e0e0;
+    --ring: #13b5ea;
 
-    --chart-1: 0.6 0.16 150;
-    --chart-2: 0.72 0.15 85;
-    --chart-3: 0.55 0.22 25;
-    --chart-4: 0.7 0.17 195;
-    --chart-5: 0.75 0.15 40;
+    --chart-1: #13b5ea;
+    --chart-2: #8c8c8c;
+    --chart-3: #e34040;
+    --chart-4: #3dcd7b;
+    --chart-5: #f5a623;
 
-    --sidebar: 0.12 0.02 260;
-    --sidebar-foreground: 0.9 0.01 260;
-    --sidebar-primary: 0.55 0.18 145;
-    --sidebar-primary-foreground: 0.12 0.02 145;
-    --sidebar-accent: 0.3 0.025 260;
-    --sidebar-accent-foreground: 0.8 0.01 260;
-    --sidebar-border: 0.22 0.02 260;
-    --sidebar-ring: 0.55 0.18 145;
-  }
-
-  .dark {
-    --background: 0.14 0.02 260;
-    --foreground: 0.92 0.01 260;
-    --card: 0.18 0.025 260;
-    --card-foreground: 0.92 0.01 260;
-    --popover: 0.22 0.02 260;
-    --popover-foreground: 0.92 0.01 260;
-
-    --primary: 0.55 0.18 145;
-    --primary-foreground: 0.14 0.02 145;
-
-    --secondary: 0.22 0.02 260;
-    --secondary-foreground: 0.85 0.01 260;
-    --muted: 0.22 0.02 260;
-    --muted-foreground: 0.55 0.01 260;
-
-    --accent: 0.72 0.14 85;
-    --accent-foreground: 0.14 0.02 85;
-
-    --destructive: 0.55 0.22 25;
-    --destructive-foreground: 0.92 0.01 25;
-
-    --success: 0.6 0.16 150;
-    --warning: 0.72 0.15 85;
-
-    --border: 0.28 0.02 260;
-    --input: 0.28 0.02 260;
-    --ring: 0.55 0.18 145;
-
-    --chart-1: 0.6 0.16 150;
-    --chart-2: 0.72 0.15 85;
-    --chart-3: 0.55 0.22 25;
-    --chart-4: 0.7 0.17 195;
-    --chart-5: 0.75 0.15 40;
-
-    --sidebar: 0.12 0.02 260;
-    --sidebar-foreground: 0.9 0.01 260;
-    --sidebar-primary: 0.55 0.18 145;
-    --sidebar-primary-foreground: 0.12 0.02 145;
-    --sidebar-accent: 0.3 0.025 260;
-    --sidebar-accent-foreground: 0.8 0.01 260;
-    --sidebar-border: 0.22 0.02 260;
-    --sidebar-ring: 0.55 0.18 145;
+    /* Sidebar stays dark — Xero navy */
+    --sidebar: #1b2a4a;
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #13b5ea;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #253660;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #253660;
+    --sidebar-ring: #13b5ea;
   }
 
   * {
@@ -142,22 +99,28 @@
   }
 
   .badge-success {
-    @apply bg-success/10 text-success border border-success/30;
+    background-color: rgb(61 205 123 / 0.12);
+    color: #2aab60;
+    border: 1px solid rgb(61 205 123 / 0.35);
   }
 
   .badge-warning {
-    @apply bg-warning/10 text-warning border border-warning/30;
+    background-color: rgb(245 166 35 / 0.12);
+    color: #c8860a;
+    border: 1px solid rgb(245 166 35 / 0.35);
   }
 
   .badge-destructive {
-    @apply bg-destructive/10 text-destructive border border-destructive/30;
+    background-color: rgb(227 64 64 / 0.12);
+    color: #e34040;
+    border: 1px solid rgb(227 64 64 / 0.35);
   }
 
   .card-elevated {
-    @apply bg-card border border-border shadow-lg;
+    @apply bg-card border border-border shadow-sm;
   }
 
   .shadow-card {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 }

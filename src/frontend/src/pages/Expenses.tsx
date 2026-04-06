@@ -39,14 +39,14 @@ import type { BillShared } from "../types";
 
 // ─── Chart colors per category ───────────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
-  Ingredients: "oklch(0.6 0.16 150)",
-  Packaging: "oklch(0.72 0.15 85)",
-  Shipping: "oklch(0.7 0.17 195)",
-  Marketing: "oklch(0.75 0.15 40)",
-  Rent: "oklch(0.55 0.22 25)",
-  Software: "oklch(0.65 0.18 280)",
-  ProfessionalServices: "oklch(0.7 0.14 320)",
-  Other: "oklch(0.5 0.01 260)",
+  Ingredients: "#3DCD7B",
+  Packaging: "#F5A623",
+  Shipping: "#13B5EA",
+  Marketing: "#9B59B6",
+  Rent: "#E34040",
+  Software: "#5B6CF0",
+  ProfessionalServices: "#E8609A",
+  Other: "#8C8C8C",
 };
 
 // ─── Date range presets ───────────────────────────────────────────────────────
@@ -495,17 +495,17 @@ export function Expenses() {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="oklch(0.28 0.02 260)"
+                  stroke="#E0E0E0"
                   vertical={false}
                 />
                 <XAxis
                   dataKey="month"
-                  tick={{ fontSize: 11, fill: "oklch(0.55 0.01 260)" }}
+                  tick={{ fontSize: 11, fill: "#8C8C8C" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "oklch(0.55 0.01 260)" }}
+                  tick={{ fontSize: 11, fill: "#8C8C8C" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) => formatGBP(v, true)}
@@ -513,13 +513,11 @@ export function Expenses() {
                 />
                 <Tooltip
                   content={<BarTooltip />}
-                  cursor={{ fill: "oklch(0.22 0.02 260 / 0.6)" }}
+                  cursor={{ fill: "rgba(19, 181, 234, 0.06)" }}
                 />
                 <Legend
                   formatter={(value: string) => (
-                    <span
-                      style={{ fontSize: 11, color: "oklch(0.55 0.01 260)" }}
-                    >
+                    <span style={{ fontSize: 11, color: "#8C8C8C" }}>
                       {BILL_CATEGORY_LABELS[value] ?? value}
                     </span>
                   )}

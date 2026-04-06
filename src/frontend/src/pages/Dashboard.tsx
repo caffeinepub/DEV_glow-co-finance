@@ -256,14 +256,14 @@ export function Dashboard() {
               label="Total Cash Balance"
               value={formatGBP(stats.totalCashBalance, true)}
               subtext="All accounts"
-              className="border-l-4 border-l-[oklch(0.7_0.17_195)]"
+              className="border-l-4 border-l-primary"
               data-ocid="kpi-cash-balance"
             />
             <StatCard
               label="Revenue This Month"
               value={formatGBP(stats.revenueThisMonth, true)}
               subtext="Paid invoices"
-              className="border-l-4 border-l-[oklch(var(--success))]"
+              className="border-l-4 border-l-success"
               data-ocid="kpi-revenue"
             />
             <StatCard
@@ -281,9 +281,7 @@ export function Dashboard() {
               trend={profitPositive ? "Positive" : "Negative"}
               className={cn(
                 "border-l-4",
-                profitPositive
-                  ? "border-l-[oklch(var(--success))]"
-                  : "border-l-destructive",
+                profitPositive ? "border-l-success" : "border-l-destructive",
               )}
               data-ocid="kpi-net-profit"
             />
@@ -304,44 +302,28 @@ export function Dashboard() {
               >
                 <defs>
                   <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="oklch(0.6 0.16 150)"
-                      stopOpacity={0.35}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="oklch(0.6 0.16 150)"
-                      stopOpacity={0}
-                    />
+                    <stop offset="5%" stopColor="#13B5EA" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#13B5EA" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gradExpenses" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="oklch(0.55 0.22 25)"
-                      stopOpacity={0.3}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="oklch(0.55 0.22 25)"
-                      stopOpacity={0}
-                    />
+                    <stop offset="5%" stopColor="#8C8C8C" stopOpacity={0.18} />
+                    <stop offset="95%" stopColor="#8C8C8C" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="oklch(0.28 0.02 260 / 0.5)"
+                  stroke="#E0E0E0"
                   vertical={false}
                 />
                 <XAxis
                   dataKey="month"
-                  tick={{ fill: "oklch(0.55 0.01 260)", fontSize: 11 }}
+                  tick={{ fill: "#8C8C8C", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   tickFormatter={(v: number) => formatGBP(v, true)}
-                  tick={{ fill: "oklch(0.55 0.01 260)", fontSize: 11 }}
+                  tick={{ fill: "#8C8C8C", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   width={64}
@@ -350,16 +332,14 @@ export function Dashboard() {
                 <Legend
                   wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
                   formatter={(value) => (
-                    <span style={{ color: "oklch(0.85 0.01 260)" }}>
-                      {value}
-                    </span>
+                    <span style={{ color: "#333333" }}>{value}</span>
                   )}
                 />
                 <Area
                   type="monotone"
                   dataKey="revenue"
                   name="Revenue"
-                  stroke="oklch(0.6 0.16 150)"
+                  stroke="#13B5EA"
                   strokeWidth={2}
                   fill="url(#gradRevenue)"
                   dot={false}
@@ -369,7 +349,7 @@ export function Dashboard() {
                   type="monotone"
                   dataKey="expenses"
                   name="Expenses"
-                  stroke="oklch(0.55 0.22 25)"
+                  stroke="#8C8C8C"
                   strokeWidth={2}
                   fill="url(#gradExpenses)"
                   dot={false}

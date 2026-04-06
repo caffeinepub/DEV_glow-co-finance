@@ -250,9 +250,9 @@ function ProductDialog({ open, onClose, editProduct }: ProductDialogProps) {
                 <span
                   className={`text-sm font-semibold ${
                     margin >= 30
-                      ? "text-[oklch(var(--success))]"
+                      ? "text-success"
                       : margin >= 0
-                        ? "text-[oklch(var(--warning))]"
+                        ? "text-warning"
                         : "text-destructive"
                   }`}
                 >
@@ -331,13 +331,13 @@ function SummaryCards({ products }: { products: ProductShared[] }) {
       label: "Total at Cost",
       value: formatGBP(totalAtCost),
       icon: ShoppingBag,
-      color: "text-[oklch(var(--chart-4))]",
+      color: "text-primary",
     },
     {
       label: "Total at Sale Price",
       value: formatGBP(totalAtSale),
       icon: TrendingUp,
-      color: "text-[oklch(var(--success))]",
+      color: "text-success",
     },
     {
       label: "Total Products",
@@ -394,13 +394,13 @@ function LowStockBanner({ products }: { products: ProductShared[] }) {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-3 rounded-lg border border-[oklch(var(--warning)/0.35)] bg-[oklch(var(--warning)/0.08)] px-4 py-3"
+      className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/8 px-4 py-3"
       data-ocid="low-stock-banner"
       role="alert"
     >
-      <AlertTriangle className="h-5 w-5 shrink-0 text-[oklch(var(--warning))] mt-0.5" />
+      <AlertTriangle className="h-5 w-5 shrink-0 text-warning mt-0.5" />
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-[oklch(var(--warning))]">
+        <p className="text-sm font-semibold text-warning">
           {alerts.length} product{alerts.length > 1 ? "s" : ""} need restocking
         </p>
         <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -614,7 +614,7 @@ export function Inventory() {
                               status === "out-of-stock"
                                 ? "text-destructive font-semibold"
                                 : status === "low-stock"
-                                  ? "text-[oklch(var(--warning))] font-semibold"
+                                  ? "text-warning font-semibold"
                                   : "text-foreground"
                             }
                           >
@@ -634,9 +634,9 @@ export function Inventory() {
                           <span
                             className={
                               product.margin >= 30
-                                ? "text-[oklch(var(--success))] font-semibold"
+                                ? "text-success font-semibold"
                                 : product.margin >= 0
-                                  ? "text-[oklch(var(--warning))]"
+                                  ? "text-warning"
                                   : "text-destructive"
                             }
                           >

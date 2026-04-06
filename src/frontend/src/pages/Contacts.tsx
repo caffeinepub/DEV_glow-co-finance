@@ -630,8 +630,8 @@ function TypeBadge({ type }: { type: CustomerType }) {
       className={cn(
         "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold tracking-wide",
         type === CustomerType.Wholesale
-          ? "bg-[oklch(0.7_0.17_195/0.15)] text-[oklch(0.7_0.17_195)] border border-[oklch(0.7_0.17_195/0.3)]"
-          : "bg-primary/10 text-primary border border-primary/30",
+          ? "bg-primary/10 text-primary border border-primary/30"
+          : "bg-success/10 text-success border border-success/30",
       )}
     >
       {type}

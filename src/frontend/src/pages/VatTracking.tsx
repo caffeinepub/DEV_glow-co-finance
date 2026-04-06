@@ -68,7 +68,7 @@ function SummaryCard({
 }) {
   const valueClass =
     variant === "positive"
-      ? "text-[oklch(var(--success))]"
+      ? "text-success"
       : variant === "negative"
         ? "text-destructive"
         : "text-foreground";
@@ -155,7 +155,7 @@ function VatBreakdownTable({
                   net > 0
                     ? "text-destructive"
                     : net < 0
-                      ? "text-[oklch(var(--success))]"
+                      ? "text-success"
                       : "text-muted-foreground"
                 }`}
               >
@@ -313,7 +313,7 @@ function BillVatTable({
                 {vatRateLabel(bill.vatRate)}
               </Badge>
             </TableCell>
-            <TableCell className="text-right font-mono text-sm font-semibold text-[oklch(var(--success))]">
+            <TableCell className="text-right font-mono text-sm font-semibold text-success">
               {formatGBP(bill.vatAmount)}
             </TableCell>
           </TableRow>
