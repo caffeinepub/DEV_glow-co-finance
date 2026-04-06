@@ -24,13 +24,13 @@ import {
 import { dateToTimestamp, formatDate, formatGBP } from "@/lib/format";
 import type { InvoiceShared } from "@/types";
 import { InvoiceStatus } from "@/types";
-import { FileText, Plus, Search } from "lucide-react";
+import { FileText, Plus, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 
 type StatusFilter = "All" | "Draft" | "Sent" | "Paid" | "Overdue";
 
 export function Invoices() {
-  const { data: invoices, isLoading } = useInvoices();
+  const { data: invoices, isLoading, isError, error, refetch } = useInvoices();
   const { data: customers } = useCustomers();
   const { data: products } = useProducts();
   const createInvoice = useCreateInvoice();
@@ -165,7 +165,33 @@ export function Invoices() {
 
       {/* Table */}
       <div className="flex-1 bg-background p-6">
-        {isLoading ? (
+        {isError ? (
+          <div
+            className="flex flex-col items-center justify-center py-20 text-center"
+            data-ocid="invoices-error-state"
+          >
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+              <RefreshCw className="w-5 h-5 text-destructive" />
+            </div>
+            <p className="text-lg font-semibold text-foreground mb-1">
+              Unable to load invoices
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              {error instanceof Error
+                ? error.message
+                : "Something went wrong. Please try again."}
+            </p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+              data-ocid="invoices-retry-btn"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Retry
+            </button>
+          </div>
+        ) : isLoading ? (
           <div className="space-y-3">
             {["sk1", "sk2", "sk3", "sk4", "sk5", "sk6"].map((k) => (
               <Skeleton key={k} className="h-12 w-full rounded-lg" />

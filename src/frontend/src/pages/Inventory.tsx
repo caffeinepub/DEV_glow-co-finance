@@ -32,6 +32,7 @@ import {
   Package,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   ShoppingBag,
   TrendingUp,
@@ -428,7 +429,13 @@ function TableSkeletons() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function Inventory() {
-  const { data: products = [], isLoading } = useProducts();
+  const {
+    data: products = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useProducts();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<ProductShared | null>(null);
@@ -472,212 +479,244 @@ export function Inventory() {
       </div>
 
       {/* Low-stock alert */}
-      {!isLoading && <LowStockBanner products={products} />}
+      {!isLoading && !isError && <LowStockBanner products={products} />}
 
-      {/* Summary cards */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {(["sk-1", "sk-2", "sk-3", "sk-4"] as const).map((k) => (
-            <Card key={k} className="card-elevated">
-              <CardContent className="p-5 space-y-3">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-8 w-32" />
-              </CardContent>
-            </Card>
-          ))}
+      {/* Error state */}
+      {isError && (
+        <div
+          className="flex flex-col items-center justify-center py-20 text-center"
+          data-ocid="inventory-error-state"
+        >
+          <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <RefreshCw className="w-5 h-5 text-destructive" />
+          </div>
+          <p className="text-lg font-semibold text-foreground mb-1">
+            Unable to load inventory
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {error instanceof Error
+              ? error.message
+              : "Something went wrong. Please try again."}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+            data-ocid="inventory-retry-btn"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
         </div>
-      ) : (
-        <SummaryCards products={products} />
       )}
 
-      {/* Products table */}
-      <Card className="card-elevated">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <CardTitle className="font-display text-base">
-              All Products
-            </CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                data-ocid="inventory-search"
-                placeholder="Search by name or SKU…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+      {/* Summary cards */}
+      {!isError &&
+        (isLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {(["sk-1", "sk-2", "sk-3", "sk-4"] as const).map((k) => (
+              <Card key={k} className="card-elevated">
+                <CardContent className="p-5 space-y-3">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-8 w-32" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardHeader>
+        ) : (
+          <SummaryCards products={products} />
+        ))}
 
-        <CardContent className="p-0">
-          {isLoading ? (
-            <TableSkeletons />
-          ) : filtered.length === 0 ? (
-            <div
-              className="flex flex-col items-center justify-center py-16 text-center"
-              data-ocid="inventory-empty-state"
-            >
-              <Package className="h-12 w-12 text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-semibold text-foreground">
-                {search ? "No products match your search" : "No products yet"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 mb-4">
-                {search
-                  ? "Try a different name or SKU"
-                  : "Add your first product to start tracking inventory"}
-              </p>
-              {!search && (
-                <Button
-                  size="sm"
-                  onClick={openAdd}
-                  data-ocid="inventory-empty-add-btn"
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add First Product
-                </Button>
-              )}
+      {/* Products table */}
+      {!isError && (
+        <Card className="card-elevated">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <CardTitle className="font-display text-base">
+                All Products
+              </CardTitle>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  data-ocid="inventory-search"
+                  placeholder="Search by name or SKU…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableHead className="text-label text-muted-foreground pl-6">
-                      Product
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground">
-                      SKU
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground text-right">
-                      Stock Qty
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground text-right">
-                      Cost Price
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground text-right">
-                      Sale Price
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground text-right">
-                      Margin
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground text-right">
-                      Reorder Point
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-label text-muted-foreground text-right pr-6">
-                      Edit
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((product, i) => {
-                    const status = getStockStatus(product);
-                    const cfg = STATUS_CONFIG[status];
-                    const qty = Number(product.stockQuantity);
-                    const reorder = Number(product.reorderPoint);
+          </CardHeader>
 
-                    return (
-                      <motion.tr
-                        key={product.id.toString()}
-                        initial={{ opacity: 0, x: -6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.035 }}
-                        className="border-border hover:bg-muted/20 transition-colors"
-                        data-ocid={`inventory-row-${product.id}`}
-                      >
-                        <TableCell className="pl-6 py-4">
-                          <div className="min-w-0">
-                            <p className="font-medium text-foreground truncate max-w-[200px]">
-                              {product.name}
-                            </p>
-                            {product.description && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[200px] mt-0.5">
-                                {product.description}
+          <CardContent className="p-0">
+            {isLoading ? (
+              <TableSkeletons />
+            ) : filtered.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center py-16 text-center"
+                data-ocid="inventory-empty-state"
+              >
+                <Package className="h-12 w-12 text-muted-foreground/40 mb-3" />
+                <p className="text-sm font-semibold text-foreground">
+                  {search ? "No products match your search" : "No products yet"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">
+                  {search
+                    ? "Try a different name or SKU"
+                    : "Add your first product to start tracking inventory"}
+                </p>
+                {!search && (
+                  <Button
+                    size="sm"
+                    onClick={openAdd}
+                    data-ocid="inventory-empty-add-btn"
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add First Product
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-label text-muted-foreground pl-6">
+                        Product
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground">
+                        SKU
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground text-right">
+                        Stock Qty
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground text-right">
+                        Cost Price
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground text-right">
+                        Sale Price
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground text-right">
+                        Margin
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground text-right">
+                        Reorder Point
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-label text-muted-foreground text-right pr-6">
+                        Edit
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((product, i) => {
+                      const status = getStockStatus(product);
+                      const cfg = STATUS_CONFIG[status];
+                      const qty = Number(product.stockQuantity);
+                      const reorder = Number(product.reorderPoint);
+
+                      return (
+                        <motion.tr
+                          key={product.id.toString()}
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.035 }}
+                          className="border-border hover:bg-muted/20 transition-colors"
+                          data-ocid={`inventory-row-${product.id}`}
+                        >
+                          <TableCell className="pl-6 py-4">
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground truncate max-w-[200px]">
+                                {product.name}
                               </p>
-                            )}
-                          </div>
-                        </TableCell>
+                              {product.description && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[200px] mt-0.5">
+                                  {product.description}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
 
-                        <TableCell>
-                          <span className="font-mono text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
-                            {product.sku}
-                          </span>
-                        </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
+                              {product.sku}
+                            </span>
+                          </TableCell>
 
-                        <TableCell className="text-right font-mono text-sm">
-                          <span
-                            className={
-                              status === "out-of-stock"
-                                ? "text-destructive font-semibold"
-                                : status === "low-stock"
-                                  ? "text-warning font-semibold"
-                                  : "text-foreground"
-                            }
-                          >
-                            {qty}
-                          </span>
-                        </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            <span
+                              className={
+                                status === "out-of-stock"
+                                  ? "text-destructive font-semibold"
+                                  : status === "low-stock"
+                                    ? "text-warning font-semibold"
+                                    : "text-foreground"
+                              }
+                            >
+                              {qty}
+                            </span>
+                          </TableCell>
 
-                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                          {formatGBP(product.costPrice)}
-                        </TableCell>
+                          <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                            {formatGBP(product.costPrice)}
+                          </TableCell>
 
-                        <TableCell className="text-right font-mono text-sm font-medium text-foreground">
-                          {formatGBP(product.salePrice)}
-                        </TableCell>
+                          <TableCell className="text-right font-mono text-sm font-medium text-foreground">
+                            {formatGBP(product.salePrice)}
+                          </TableCell>
 
-                        <TableCell className="text-right font-mono text-sm">
-                          <span
-                            className={
-                              product.margin >= 30
-                                ? "text-success font-semibold"
-                                : product.margin >= 0
-                                  ? "text-warning"
-                                  : "text-destructive"
-                            }
-                          >
-                            {formatPercent(product.margin)}
-                          </span>
-                        </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            <span
+                              className={
+                                product.margin >= 30
+                                  ? "text-success font-semibold"
+                                  : product.margin >= 0
+                                    ? "text-warning"
+                                    : "text-destructive"
+                              }
+                            >
+                              {formatPercent(product.margin)}
+                            </span>
+                          </TableCell>
 
-                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                          {reorder}
-                        </TableCell>
+                          <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                            {reorder}
+                          </TableCell>
 
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${cfg.cls}`}
-                          >
-                            {cfg.label}
-                          </Badge>
-                        </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${cfg.cls}`}
+                            >
+                              {cfg.label}
+                            </Badge>
+                          </TableCell>
 
-                        <TableCell className="text-right pr-6">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openEdit(product)}
-                            data-ocid={`edit-product-${product.id}`}
-                            aria-label={`Edit ${product.name}`}
-                            className="h-8 w-8 p-0 hover:bg-muted/40"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </motion.tr>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          <TableCell className="text-right pr-6">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEdit(product)}
+                              data-ocid={`edit-product-${product.id}`}
+                              aria-label={`Edit ${product.name}`}
+                              className="h-8 w-8 p-0 hover:bg-muted/40"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </motion.tr>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <ProductDialog
         open={dialogOpen}

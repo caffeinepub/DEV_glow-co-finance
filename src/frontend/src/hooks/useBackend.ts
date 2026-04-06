@@ -27,6 +27,27 @@ function useBackendActor() {
   return useActor(createActor);
 }
 
+// ─── Timeout wrapper ─────────────────────────────────────────────────────────
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Request timed out after ${ms / 1000} seconds`)),
+        ms,
+      ),
+    ),
+  ]);
+}
+
+const TIMEOUT_MS = 30_000;
+const RETRY_CONFIG = {
+  retry: 2,
+  retryDelay: 3000,
+  retryOnMount: true,
+} as const;
+
 // ─── Queries ────────────────────────────────────────────────────────────────
 
 export function useDashboardStats() {
@@ -35,10 +56,11 @@ export function useDashboardStats() {
     queryKey: ["dashboardStats"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not ready");
-      return actor.getDashboardStats();
+      return withTimeout(actor.getDashboardStats(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -48,11 +70,12 @@ export function useInvoices() {
     queryKey: ["invoices"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getInvoices();
+      return withTimeout(actor.getInvoices(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
     refetchInterval: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -62,10 +85,11 @@ export function useInvoice(id: bigint | null) {
     queryKey: ["invoice", id?.toString()],
     queryFn: async () => {
       if (!actor || id === null) return null;
-      return actor.getInvoice(id);
+      return withTimeout(actor.getInvoice(id), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching && id !== null,
     staleTime: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -75,11 +99,12 @@ export function useBills() {
     queryKey: ["bills"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getBills();
+      return withTimeout(actor.getBills(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
     refetchInterval: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -89,10 +114,11 @@ export function useBill(id: bigint | null) {
     queryKey: ["bill", id?.toString()],
     queryFn: async () => {
       if (!actor || id === null) return null;
-      return actor.getBill(id);
+      return withTimeout(actor.getBill(id), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching && id !== null,
     staleTime: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -102,11 +128,12 @@ export function useProducts() {
     queryKey: ["products"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getProducts();
+      return withTimeout(actor.getProducts(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
     refetchInterval: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -116,10 +143,11 @@ export function useProduct(id: bigint | null) {
     queryKey: ["product", id?.toString()],
     queryFn: async () => {
       if (!actor || id === null) return null;
-      return actor.getProduct(id);
+      return withTimeout(actor.getProduct(id), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching && id !== null,
     staleTime: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -129,11 +157,12 @@ export function useCustomers() {
     queryKey: ["customers"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getCustomers();
+      return withTimeout(actor.getCustomers(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
     refetchInterval: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -143,11 +172,12 @@ export function useSuppliers() {
     queryKey: ["suppliers"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getSuppliers();
+      return withTimeout(actor.getSuppliers(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
     refetchInterval: 300_000,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -157,11 +187,14 @@ export function useProfitAndLoss(startDate: Timestamp, endDate: Timestamp) {
     queryKey: ["profitAndLoss", startDate.toString(), endDate.toString()],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getProfitAndLoss(startDate, endDate);
+      return withTimeout(
+        actor.getProfitAndLoss(startDate, endDate),
+        TIMEOUT_MS,
+      );
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
-    retry: false,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -171,11 +204,14 @@ export function useExpenseSummary(startDate: Timestamp, endDate: Timestamp) {
     queryKey: ["expenseSummary", startDate.toString(), endDate.toString()],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getExpenseSummary(startDate, endDate);
+      return withTimeout(
+        actor.getExpenseSummary(startDate, endDate),
+        TIMEOUT_MS,
+      );
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
-    retry: false,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -185,12 +221,12 @@ export function useAgedReceivables() {
     queryKey: ["agedReceivables"],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getAgedReceivables();
+      return withTimeout(actor.getAgedReceivables(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
     refetchInterval: 300_000,
-    retry: false,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -200,12 +236,12 @@ export function useAgedPayables() {
     queryKey: ["agedPayables"],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getAgedPayables();
+      return withTimeout(actor.getAgedPayables(), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
     refetchInterval: 300_000,
-    retry: false,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -215,11 +251,11 @@ export function useCashFlow(year: bigint) {
     queryKey: ["cashFlow", year.toString()],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getCashFlow(year);
+      return withTimeout(actor.getCashFlow(year), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
-    retry: false,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -229,11 +265,11 @@ export function useMonthlySummary(month: bigint, year: bigint) {
     queryKey: ["monthlySummary", month.toString(), year.toString()],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getMonthlySummary(month, year);
+      return withTimeout(actor.getMonthlySummary(month, year), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
-    retry: false,
+    ...RETRY_CONFIG,
   });
 }
 
@@ -243,11 +279,11 @@ export function useVatSummary(quarter: bigint, year: bigint) {
     queryKey: ["vatSummary", quarter.toString(), year.toString()],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getVatSummary(quarter, year);
+      return withTimeout(actor.getVatSummary(quarter, year), TIMEOUT_MS);
     },
     enabled: !!actor && !isFetching,
     staleTime: 300_000,
-    retry: false,
+    ...RETRY_CONFIG,
   });
 }
 

@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   DollarSign,
+  RefreshCw,
   TrendingUp,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -160,11 +161,20 @@ export function Expenses() {
   const startTs = dateToTimestamp(dateRange.start);
   const endTs = dateToTimestamp(dateRange.end);
 
-  const { data: summary, isLoading: summaryLoading } = useExpenseSummary(
-    startTs,
-    endTs,
-  );
-  const { data: bills, isLoading: billsLoading } = useBills();
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    error: summaryErr,
+    refetch: refetchSummary,
+  } = useExpenseSummary(startTs, endTs);
+  const {
+    data: bills,
+    isLoading: billsLoading,
+    isError: billsError,
+    error: billsErr,
+    refetch: refetchBills,
+  } = useBills();
 
   // Compute 12-month trend data from bills
   const trendData = useMemo(() => {
@@ -341,474 +351,519 @@ export function Expenses() {
         </div>
       </div>
 
+      {/* Error state */}
+      {(summaryError || billsError) && (
+        <div
+          className="flex flex-col items-center justify-center py-20 text-center"
+          data-ocid="expenses-error-state"
+        >
+          <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <RefreshCw className="w-5 h-5 text-destructive" />
+          </div>
+          <p className="text-lg font-semibold text-foreground mb-1">
+            Unable to load expenses
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {(summaryErr ?? billsErr) instanceof Error
+              ? (summaryErr ?? billsErr)!.message
+              : "Something went wrong. Please try again."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              refetchSummary();
+              refetchBills();
+            }}
+            className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+            data-ocid="expenses-retry-btn"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Summary KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {summaryLoading ? (
-          ["kpi-total", "kpi-top", "kpi-increase"].map((id) => (
-            <Skeleton key={id} className="h-24 rounded-xl" />
-          ))
-        ) : (
-          <>
-            <div
-              className="card-elevated rounded-xl p-5 flex items-start gap-4"
-              data-ocid="expenses-total"
-            >
-              <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive flex-shrink-0">
-                <DollarSign className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-label text-muted-foreground">
-                  Total Expenses
-                </p>
-                <p className="text-2xl font-bold font-display text-foreground mt-0.5">
-                  {formatGBP(totalExpenses)}
-                </p>
-              </div>
-            </div>
-            <div
-              className="card-elevated rounded-xl p-5 flex items-start gap-4"
-              data-ocid="expenses-top-category"
-            >
-              <div className="p-2.5 rounded-lg bg-warning/10 text-warning flex-shrink-0">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-label text-muted-foreground">Top Category</p>
-                <p className="text-2xl font-bold font-display text-foreground mt-0.5 truncate">
-                  {topCategory.label}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatGBP(topCategory.amount)}
-                </p>
-              </div>
-            </div>
-            <div
-              className="card-elevated rounded-xl p-5 flex items-start gap-4"
-              data-ocid="expenses-biggest-increase"
-            >
-              <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive flex-shrink-0">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-label text-muted-foreground">
-                  Biggest MoM Rise
-                </p>
-                {biggestIncrease ? (
-                  <>
-                    <p className="text-2xl font-bold font-display text-foreground mt-0.5 truncate">
-                      {biggestIncrease.label}
-                    </p>
-                    <p className="text-xs text-destructive font-semibold">
-                      +{biggestIncrease.pct.toFixed(1)}% vs prev period
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-2xl font-bold font-display text-muted-foreground mt-0.5">
-                    —
+      {!(summaryError || billsError) && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {summaryLoading ? (
+            ["kpi-total", "kpi-top", "kpi-increase"].map((id) => (
+              <Skeleton key={id} className="h-24 rounded-xl" />
+            ))
+          ) : (
+            <>
+              <div
+                className="card-elevated rounded-xl p-5 flex items-start gap-4"
+                data-ocid="expenses-total"
+              >
+                <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive flex-shrink-0">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-label text-muted-foreground">
+                    Total Expenses
                   </p>
-                )}
+                  <p className="text-2xl font-bold font-display text-foreground mt-0.5">
+                    {formatGBP(totalExpenses)}
+                  </p>
+                </div>
               </div>
-            </div>
-          </>
-        )}
-      </div>
+              <div
+                className="card-elevated rounded-xl p-5 flex items-start gap-4"
+                data-ocid="expenses-top-category"
+              >
+                <div className="p-2.5 rounded-lg bg-warning/10 text-warning flex-shrink-0">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-label text-muted-foreground">
+                    Top Category
+                  </p>
+                  <p className="text-2xl font-bold font-display text-foreground mt-0.5 truncate">
+                    {topCategory.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatGBP(topCategory.amount)}
+                  </p>
+                </div>
+              </div>
+              <div
+                className="card-elevated rounded-xl p-5 flex items-start gap-4"
+                data-ocid="expenses-biggest-increase"
+              >
+                <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive flex-shrink-0">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-label text-muted-foreground">
+                    Biggest MoM Rise
+                  </p>
+                  {biggestIncrease ? (
+                    <>
+                      <p className="text-2xl font-bold font-display text-foreground mt-0.5 truncate">
+                        {biggestIncrease.label}
+                      </p>
+                      <p className="text-xs text-destructive font-semibold">
+                        +{biggestIncrease.pct.toFixed(1)}% vs prev period
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-2xl font-bold font-display text-muted-foreground mt-0.5">
+                      —
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Donut chart */}
-        <div
-          className="lg:col-span-2 card-elevated rounded-xl p-5"
-          data-ocid="expenses-donut"
-        >
-          <h2 className="text-sm font-semibold text-foreground mb-4">
-            Expenses by Category
-          </h2>
-          {summaryLoading ? (
-            <Skeleton className="h-56 rounded-lg" />
-          ) : donutData.length === 0 ? (
-            <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
-              No expense data for this period
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie
-                    data={donutData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {donutData.map((entry) => (
-                      <Cell
-                        key={entry.name}
-                        fill={entry.color}
-                        stroke="transparent"
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<DonutTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-1.5">
-                {donutData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-2 text-xs">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ background: d.color }}
-                    />
-                    <span className="flex-1 text-muted-foreground truncate">
-                      {d.name}
-                    </span>
-                    <span className="font-mono text-foreground">
-                      {formatGBP(d.value, true)}
-                    </span>
-                    <span className="text-muted-foreground w-10 text-right">
-                      {d.pct.toFixed(1)}%
-                    </span>
-                  </div>
-                ))}
+      {!(summaryError || billsError) && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Donut chart */}
+          <div
+            className="lg:col-span-2 card-elevated rounded-xl p-5"
+            data-ocid="expenses-donut"
+          >
+            <h2 className="text-sm font-semibold text-foreground mb-4">
+              Expenses by Category
+            </h2>
+            {summaryLoading ? (
+              <Skeleton className="h-56 rounded-lg" />
+            ) : donutData.length === 0 ? (
+              <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">
+                No expense data for this period
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={donutData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {donutData.map((entry) => (
+                        <Cell
+                          key={entry.name}
+                          fill={entry.color}
+                          stroke="transparent"
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<DonutTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1.5">
+                  {donutData.map((d) => (
+                    <div
+                      key={d.name}
+                      className="flex items-center gap-2 text-xs"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ background: d.color }}
+                      />
+                      <span className="flex-1 text-muted-foreground truncate">
+                        {d.name}
+                      </span>
+                      <span className="font-mono text-foreground">
+                        {formatGBP(d.value, true)}
+                      </span>
+                      <span className="text-muted-foreground w-10 text-right">
+                        {d.pct.toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-        {/* Stacked bar chart — 12-month trend */}
-        <div
-          className="lg:col-span-3 card-elevated rounded-xl p-5"
-          data-ocid="expenses-trend"
-        >
-          <h2 className="text-sm font-semibold text-foreground mb-4">
-            Monthly Expense Trend (12 months)
-          </h2>
-          {billsLoading ? (
-            <Skeleton className="h-64 rounded-lg" />
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart
-                data={trendData}
-                barSize={12}
-                margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#E0E0E0"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 11, fill: "#8C8C8C" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#8C8C8C" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => formatGBP(v, true)}
-                  width={56}
-                />
-                <Tooltip
-                  content={<BarTooltip />}
-                  cursor={{ fill: "rgba(19, 181, 234, 0.06)" }}
-                />
-                <Legend
-                  formatter={(value: string) => (
-                    <span style={{ fontSize: 11, color: "#8C8C8C" }}>
-                      {BILL_CATEGORY_LABELS[value] ?? value}
-                    </span>
-                  )}
-                />
-                {categories.map((cat) => (
-                  <Bar
-                    key={cat}
-                    dataKey={cat}
-                    stackId="a"
-                    fill={CATEGORY_COLORS[cat] ?? CATEGORY_COLORS.Other}
+          {/* Stacked bar chart — 12-month trend */}
+          <div
+            className="lg:col-span-3 card-elevated rounded-xl p-5"
+            data-ocid="expenses-trend"
+          >
+            <h2 className="text-sm font-semibold text-foreground mb-4">
+              Monthly Expense Trend (12 months)
+            </h2>
+            {billsLoading ? (
+              <Skeleton className="h-64 rounded-lg" />
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={trendData}
+                  barSize={12}
+                  margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#E0E0E0"
+                    vertical={false}
                   />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: "#8C8C8C" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#8C8C8C" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v: number) => formatGBP(v, true)}
+                    width={56}
+                  />
+                  <Tooltip
+                    content={<BarTooltip />}
+                    cursor={{ fill: "rgba(19, 181, 234, 0.06)" }}
+                  />
+                  <Legend
+                    formatter={(value: string) => (
+                      <span style={{ fontSize: 11, color: "#8C8C8C" }}>
+                        {BILL_CATEGORY_LABELS[value] ?? value}
+                      </span>
+                    )}
+                  />
+                  {categories.map((cat) => (
+                    <Bar
+                      key={cat}
+                      dataKey={cat}
+                      stackId="a"
+                      fill={CATEGORY_COLORS[cat] ?? CATEGORY_COLORS.Other}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Category breakdown table */}
-      <div
-        className="card-elevated rounded-xl overflow-hidden"
-        data-ocid="expenses-category-table"
-      >
-        <div className="p-5 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground">
-            Category Breakdown
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            This period vs previous period · flagged if &gt;20% increase
-          </p>
-        </div>
-        {summaryLoading ? (
-          <div className="p-5 space-y-2">
-            {["c1", "c2", "c3", "c4", "c5", "c6"].map((id) => (
-              <Skeleton key={id} className="h-10 rounded" />
-            ))}
+      {!(summaryError || billsError) && (
+        <div
+          className="card-elevated rounded-xl overflow-hidden"
+          data-ocid="expenses-category-table"
+        >
+          <div className="p-5 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground">
+              Category Breakdown
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              This period vs previous period · flagged if &gt;20% increase
+            </p>
           </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/30 text-left">
-                <th className="px-5 py-3 text-label text-muted-foreground">
-                  Category
-                </th>
-                <th className="px-5 py-3 text-label text-muted-foreground text-right">
-                  This Period
-                </th>
-                <th className="px-5 py-3 text-label text-muted-foreground text-right hidden sm:table-cell">
-                  Prev Period
-                </th>
-                <th className="px-5 py-3 text-label text-muted-foreground text-right">
-                  Change
-                </th>
-                <th className="px-5 py-3 text-label text-muted-foreground text-center w-12">
-                  Flag
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {(summary?.categories ?? [])
-                .filter((c) => c.amount > 0 || c.prevAmount > 0)
-                .map((cat) => {
-                  const label =
-                    BILL_CATEGORY_LABELS[cat.category] ?? cat.category;
-                  const changePct =
-                    cat.prevAmount > 0
-                      ? ((cat.amount - cat.prevAmount) / cat.prevAmount) * 100
-                      : null;
-                  const isIncrease = changePct !== null && changePct > 0;
-                  return (
-                    <tr
-                      key={cat.category}
-                      className="hover:bg-muted/20 transition-smooth"
+          {summaryLoading ? (
+            <div className="p-5 space-y-2">
+              {["c1", "c2", "c3", "c4", "c5", "c6"].map((id) => (
+                <Skeleton key={id} className="h-10 rounded" />
+              ))}
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/30 text-left">
+                  <th className="px-5 py-3 text-label text-muted-foreground">
+                    Category
+                  </th>
+                  <th className="px-5 py-3 text-label text-muted-foreground text-right">
+                    This Period
+                  </th>
+                  <th className="px-5 py-3 text-label text-muted-foreground text-right hidden sm:table-cell">
+                    Prev Period
+                  </th>
+                  <th className="px-5 py-3 text-label text-muted-foreground text-right">
+                    Change
+                  </th>
+                  <th className="px-5 py-3 text-label text-muted-foreground text-center w-12">
+                    Flag
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {(summary?.categories ?? [])
+                  .filter((c) => c.amount > 0 || c.prevAmount > 0)
+                  .map((cat) => {
+                    const label =
+                      BILL_CATEGORY_LABELS[cat.category] ?? cat.category;
+                    const changePct =
+                      cat.prevAmount > 0
+                        ? ((cat.amount - cat.prevAmount) / cat.prevAmount) * 100
+                        : null;
+                    const isIncrease = changePct !== null && changePct > 0;
+                    return (
+                      <tr
+                        key={cat.category}
+                        className="hover:bg-muted/20 transition-smooth"
+                      >
+                        <td className="px-5 py-3 font-medium text-foreground">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{
+                                background:
+                                  CATEGORY_COLORS[cat.category] ??
+                                  CATEGORY_COLORS.Other,
+                              }}
+                            />
+                            {label}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right font-mono text-foreground">
+                          {formatGBP(cat.amount)}
+                        </td>
+                        <td className="px-5 py-3 text-right font-mono text-muted-foreground hidden sm:table-cell">
+                          {formatGBP(cat.prevAmount)}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          {changePct !== null ? (
+                            <span
+                              className={`flex items-center justify-end gap-1 font-semibold text-sm ${isIncrease ? "text-destructive" : "text-success"}`}
+                            >
+                              {isIncrease ? (
+                                <ArrowUpRight className="w-3.5 h-3.5" />
+                              ) : (
+                                <ArrowDownRight className="w-3.5 h-3.5" />
+                              )}
+                              {isIncrease ? "+" : ""}
+                              {changePct.toFixed(1)}%
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          {cat.flagged && (
+                            <AlertTriangle
+                              className="w-4 h-4 text-destructive mx-auto"
+                              aria-label="Over 20% increase"
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {(summary?.categories ?? []).filter(
+                  (c) => c.amount > 0 || c.prevAmount > 0,
+                ).length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-5 py-8 text-center text-muted-foreground text-sm"
                     >
-                      <td className="px-5 py-3 font-medium text-foreground">
-                        <div className="flex items-center gap-2">
+                      No expense categories for this period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {summary && summary.total > 0 && (
+                <tfoot>
+                  <tr className="bg-muted/30 border-t border-border font-semibold">
+                    <td className="px-5 py-3 text-foreground">Total</td>
+                    <td className="px-5 py-3 text-right font-mono text-foreground">
+                      {formatGBP(summary.total)}
+                    </td>
+                    <td className="px-5 py-3 hidden sm:table-cell" />
+                    <td className="px-5 py-3" />
+                    <td className="px-5 py-3" />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Expense list */}
+      {!(summaryError || billsError) && (
+        <div
+          className="card-elevated rounded-xl overflow-hidden"
+          data-ocid="expenses-list"
+        >
+          <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                Individual Bills
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {filteredBills.length} bill
+                {filteredBills.length !== 1 ? "s" : ""} in selected range
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="bg-card border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                data-ocid="expenses-category-filter"
+              >
+                <option value="all">All categories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {BILL_CATEGORY_LABELS[c] ?? c}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-card border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                data-ocid="expenses-status-filter"
+              >
+                <option value="all">All statuses</option>
+                {Object.values(BillStatus).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/30 text-left">
+                  {(
+                    [
+                      { label: "Date", field: "date" as SortField },
+                      { label: "Supplier", field: "supplier" as SortField },
+                      { label: "Category", field: "category" as SortField },
+                      { label: "Amount", field: "amount" as SortField },
+                      { label: "Status", field: "status" as SortField },
+                    ] as const
+                  ).map(({ label, field }) => (
+                    <th key={field} className="px-5 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort(field)}
+                        className="flex items-center gap-1 text-label text-muted-foreground hover:text-foreground transition-smooth"
+                        data-ocid={`expenses-sort-${field}`}
+                      >
+                        {label}
+                        <SortIcon field={field} />
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {billsLoading ? (
+                  ["b1", "b2", "b3", "b4", "b5"].map((id) => (
+                    <tr key={id}>
+                      <td colSpan={5} className="px-5 py-3">
+                        <Skeleton className="h-5 rounded" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredBills.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-5 py-10 text-center text-muted-foreground text-sm"
+                      data-ocid="expenses-empty"
+                    >
+                      No bills found for the selected filters
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBills.map((bill) => (
+                    <tr
+                      key={bill.id.toString()}
+                      className="hover:bg-muted/20 transition-smooth"
+                      data-ocid={`expenses-bill-${bill.id}`}
+                    >
+                      <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
+                        {formatDate(bill.date)}
+                      </td>
+                      <td className="px-5 py-3 font-medium text-foreground max-w-[160px] truncate">
+                        {bill.supplierName}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                           <span
-                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            className="w-2 h-2 rounded-full flex-shrink-0"
                             style={{
                               background:
-                                CATEGORY_COLORS[cat.category] ??
+                                CATEGORY_COLORS[bill.category] ??
                                 CATEGORY_COLORS.Other,
                             }}
                           />
-                          {label}
-                        </div>
+                          {BILL_CATEGORY_LABELS[bill.category] ?? bill.category}
+                        </span>
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-foreground">
-                        {formatGBP(cat.amount)}
+                      <td className="px-5 py-3 font-mono text-foreground text-right whitespace-nowrap">
+                        {formatGBP(bill.amount)}
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-muted-foreground hidden sm:table-cell">
-                        {formatGBP(cat.prevAmount)}
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        {changePct !== null ? (
-                          <span
-                            className={`flex items-center justify-end gap-1 font-semibold text-sm ${isIncrease ? "text-destructive" : "text-success"}`}
-                          >
-                            {isIncrease ? (
-                              <ArrowUpRight className="w-3.5 h-3.5" />
-                            ) : (
-                              <ArrowDownRight className="w-3.5 h-3.5" />
-                            )}
-                            {isIncrease ? "+" : ""}
-                            {changePct.toFixed(1)}%
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        {cat.flagged && (
-                          <AlertTriangle
-                            className="w-4 h-4 text-destructive mx-auto"
-                            aria-label="Over 20% increase"
-                          />
-                        )}
+                      <td className="px-5 py-3">
+                        <Badge
+                          className={
+                            bill.status === BillStatus.Paid
+                              ? "badge-success"
+                              : bill.status === BillStatus.Overdue
+                                ? "badge-destructive"
+                                : "badge-warning"
+                          }
+                          variant="outline"
+                        >
+                          {bill.status}
+                        </Badge>
                       </td>
                     </tr>
-                  );
-                })}
-              {(summary?.categories ?? []).filter(
-                (c) => c.amount > 0 || c.prevAmount > 0,
-              ).length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-5 py-8 text-center text-muted-foreground text-sm"
-                  >
-                    No expense categories for this period
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {summary && summary.total > 0 && (
-              <tfoot>
-                <tr className="bg-muted/30 border-t border-border font-semibold">
-                  <td className="px-5 py-3 text-foreground">Total</td>
-                  <td className="px-5 py-3 text-right font-mono text-foreground">
-                    {formatGBP(summary.total)}
-                  </td>
-                  <td className="px-5 py-3 hidden sm:table-cell" />
-                  <td className="px-5 py-3" />
-                  <td className="px-5 py-3" />
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        )}
-      </div>
-
-      {/* Expense list */}
-      <div
-        className="card-elevated rounded-xl overflow-hidden"
-        data-ocid="expenses-list"
-      >
-        <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">
-              Individual Bills
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {filteredBills.length} bill{filteredBills.length !== 1 ? "s" : ""}{" "}
-              in selected range
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-card border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              data-ocid="expenses-category-filter"
-            >
-              <option value="all">All categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {BILL_CATEGORY_LABELS[c] ?? c}
-                </option>
-              ))}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-card border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              data-ocid="expenses-status-filter"
-            >
-              <option value="all">All statuses</option>
-              {Object.values(BillStatus).map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/30 text-left">
-                {(
-                  [
-                    { label: "Date", field: "date" as SortField },
-                    { label: "Supplier", field: "supplier" as SortField },
-                    { label: "Category", field: "category" as SortField },
-                    { label: "Amount", field: "amount" as SortField },
-                    { label: "Status", field: "status" as SortField },
-                  ] as const
-                ).map(({ label, field }) => (
-                  <th key={field} className="px-5 py-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleSort(field)}
-                      className="flex items-center gap-1 text-label text-muted-foreground hover:text-foreground transition-smooth"
-                      data-ocid={`expenses-sort-${field}`}
-                    >
-                      {label}
-                      <SortIcon field={field} />
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {billsLoading ? (
-                ["b1", "b2", "b3", "b4", "b5"].map((id) => (
-                  <tr key={id}>
-                    <td colSpan={5} className="px-5 py-3">
-                      <Skeleton className="h-5 rounded" />
-                    </td>
-                  </tr>
-                ))
-              ) : filteredBills.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-5 py-10 text-center text-muted-foreground text-sm"
-                    data-ocid="expenses-empty"
-                  >
-                    No bills found for the selected filters
-                  </td>
-                </tr>
-              ) : (
-                filteredBills.map((bill) => (
-                  <tr
-                    key={bill.id.toString()}
-                    className="hover:bg-muted/20 transition-smooth"
-                    data-ocid={`expenses-bill-${bill.id}`}
-                  >
-                    <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
-                      {formatDate(bill.date)}
-                    </td>
-                    <td className="px-5 py-3 font-medium text-foreground max-w-[160px] truncate">
-                      {bill.supplierName}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{
-                            background:
-                              CATEGORY_COLORS[bill.category] ??
-                              CATEGORY_COLORS.Other,
-                          }}
-                        />
-                        {BILL_CATEGORY_LABELS[bill.category] ?? bill.category}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 font-mono text-foreground text-right whitespace-nowrap">
-                      {formatGBP(bill.amount)}
-                    </td>
-                    <td className="px-5 py-3">
-                      <Badge
-                        className={
-                          bill.status === BillStatus.Paid
-                            ? "badge-success"
-                            : bill.status === BillStatus.Overdue
-                              ? "badge-destructive"
-                              : "badge-warning"
-                        }
-                        variant="outline"
-                      >
-                        {bill.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

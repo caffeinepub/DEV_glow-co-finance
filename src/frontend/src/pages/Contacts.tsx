@@ -52,6 +52,7 @@ import {
   Pencil,
   Plus,
   ReceiptText,
+  RefreshCw,
   Search,
   TrendingUp,
   Users,
@@ -642,8 +643,20 @@ function TypeBadge({ type }: { type: CustomerType }) {
 // ─── Main Contacts Page ──────────────────────────────────────────────────────
 
 export function Contacts() {
-  const { data: customers, isLoading: loadingCustomers } = useCustomers();
-  const { data: suppliers, isLoading: loadingSuppliers } = useSuppliers();
+  const {
+    data: customers,
+    isLoading: loadingCustomers,
+    isError: customersError,
+    error: customersErr,
+    refetch: refetchCustomers,
+  } = useCustomers();
+  const {
+    data: suppliers,
+    isLoading: loadingSuppliers,
+    isError: suppliersError,
+    error: suppliersErr,
+    refetch: refetchSuppliers,
+  } = useSuppliers();
   const { data: invoices } = useInvoices();
   const { data: bills } = useBills();
 
@@ -788,7 +801,33 @@ export function Contacts() {
           {/* ── Customers Tab ─────────────────────────────────────────── */}
           <TabsContent value="customers">
             <div className="card-elevated rounded-xl overflow-hidden">
-              {loadingCustomers ? (
+              {customersError ? (
+                <div
+                  className="flex flex-col items-center justify-center py-16 text-center"
+                  data-ocid="customers-error-state"
+                >
+                  <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+                    <RefreshCw className="w-4 h-4 text-destructive" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground mb-1">
+                    Unable to load customers
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {customersErr instanceof Error
+                      ? customersErr.message
+                      : "Something went wrong."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => refetchCustomers()}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-xs"
+                    data-ocid="customers-retry-btn"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Retry
+                  </button>
+                </div>
+              ) : loadingCustomers ? (
                 <div className="p-4 space-y-3">
                   {["sk1", "sk2", "sk3", "sk4", "sk5"].map((k) => (
                     <Skeleton key={k} className="h-12 w-full rounded-lg" />
@@ -899,7 +938,33 @@ export function Contacts() {
           {/* ── Suppliers Tab ──────────────────────────────────────────── */}
           <TabsContent value="suppliers">
             <div className="card-elevated rounded-xl overflow-hidden">
-              {loadingSuppliers ? (
+              {suppliersError ? (
+                <div
+                  className="flex flex-col items-center justify-center py-16 text-center"
+                  data-ocid="suppliers-error-state"
+                >
+                  <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+                    <RefreshCw className="w-4 h-4 text-destructive" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground mb-1">
+                    Unable to load suppliers
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {suppliersErr instanceof Error
+                      ? suppliersErr.message
+                      : "Something went wrong."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => refetchSuppliers()}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-xs"
+                    data-ocid="suppliers-retry-btn"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Retry
+                  </button>
+                </div>
+              ) : loadingSuppliers ? (
                 <div className="p-4 space-y-3">
                   {["sk1", "sk2", "sk3", "sk4", "sk5"].map((k) => (
                     <Skeleton key={k} className="h-12 w-full rounded-lg" />

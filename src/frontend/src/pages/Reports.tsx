@@ -10,7 +10,13 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Minus, Printer, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  Minus,
+  Printer,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { useCallback, useState } from "react";
 import {
   Bar,
@@ -68,6 +74,9 @@ interface AgedReportTabProps {
   buckets: AgedBucket[] | undefined;
   grandTotal: number | undefined;
   isLoading: boolean;
+  isError?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
 }
 
 function AgedReportTab({
@@ -77,7 +86,39 @@ function AgedReportTab({
   buckets,
   grandTotal,
   isLoading,
+  isError,
+  error,
+  onRetry,
 }: AgedReportTabProps) {
+  if (isError) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center py-16 text-center mt-6"
+        data-ocid={`aged-error-${title.toLowerCase().replace(/\s/g, "-")}`}
+      >
+        <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+          <RefreshCw className="w-4 h-4 text-destructive" />
+        </div>
+        <p className="text-sm font-semibold text-foreground mb-1">
+          Unable to load {title.toLowerCase()}
+        </p>
+        <p className="text-xs text-muted-foreground mb-4">
+          {error instanceof Error ? error.message : "Something went wrong."}
+        </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-xs"
+            data-ocid={`aged-retry-${title.toLowerCase().replace(/\s/g, "-")}`}
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </button>
+        )}
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 mt-6">
@@ -256,7 +297,13 @@ function CashFlowTooltip({ active, payload, label }: CashFlowTooltipProps) {
 
 function CashFlowTab() {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
-  const { data: cashFlowData, isLoading } = useCashFlow(BigInt(selectedYear));
+  const {
+    data: cashFlowData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useCashFlow(BigInt(selectedYear));
 
   const chartData =
     cashFlowData?.map((row: MonthlyCashFlow) => ({
@@ -272,215 +319,256 @@ function CashFlowTab() {
 
   return (
     <div className="space-y-6 mt-6 print:mt-0" data-ocid="cash-flow-content">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-section-heading text-foreground">Cash Flow</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Monthly inflows, outflows and running balance
+      {isError && (
+        <div
+          className="flex flex-col items-center justify-center py-16 text-center"
+          data-ocid="cashflow-error-state"
+        >
+          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+            <RefreshCw className="w-4 h-4 text-destructive" />
+          </div>
+          <p className="text-sm font-semibold text-foreground mb-1">
+            Unable to load cash flow
           </p>
-        </div>
-        <div className="flex items-center gap-3 print:hidden">
-          <Select
-            value={String(selectedYear)}
-            onValueChange={(v) => setSelectedYear(Number(v))}
+          <p className="text-xs text-muted-foreground mb-4">
+            {error instanceof Error ? error.message : "Something went wrong."}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-xs"
+            data-ocid="cashflow-retry-btn"
           >
-            <SelectTrigger className="w-28" data-ocid="select-cash-flow-year">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {YEAR_OPTIONS.map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="gap-2"
-            data-ocid="btn-print-cashflow"
-          >
-            <Printer className="h-4 w-4" />
-            Print / Export PDF
-          </Button>
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </button>
         </div>
-      </div>
-
-      {/* KPI row */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Total Cash In", value: totalIn, color: "text-success" },
-          {
-            label: "Total Cash Out",
-            value: totalOut,
-            color: "text-destructive",
-          },
-          {
-            label: "Net Flow",
-            value: netFlow,
-            color: netFlow >= 0 ? "text-success" : "text-destructive",
-          },
-        ].map((kpi) => (
-          <Card key={kpi.label} className="bg-card border border-border">
-            <CardContent className="pt-4 pb-4">
-              <p className="text-label text-muted-foreground">{kpi.label}</p>
-              <p
-                className={`text-xl font-bold font-display tabular-nums mt-1 ${kpi.color}`}
-              >
-                {formatGBP(kpi.value)}
+      )}
+      {!isError && (
+        <>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-section-heading text-foreground">
+                Cash Flow
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Monthly inflows, outflows and running balance
               </p>
+            </div>
+            <div className="flex items-center gap-3 print:hidden">
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(v) => setSelectedYear(Number(v))}
+              >
+                <SelectTrigger
+                  className="w-28"
+                  data-ocid="select-cash-flow-year"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEAR_OPTIONS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                className="gap-2"
+                data-ocid="btn-print-cashflow"
+              >
+                <Printer className="h-4 w-4" />
+                Print / Export PDF
+              </Button>
+            </div>
+          </div>
+
+          {/* KPI row */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Total Cash In", value: totalIn, color: "text-success" },
+              {
+                label: "Total Cash Out",
+                value: totalOut,
+                color: "text-destructive",
+              },
+              {
+                label: "Net Flow",
+                value: netFlow,
+                color: netFlow >= 0 ? "text-success" : "text-destructive",
+              },
+            ].map((kpi) => (
+              <Card key={kpi.label} className="bg-card border border-border">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-label text-muted-foreground">
+                    {kpi.label}
+                  </p>
+                  <p
+                    className={`text-xl font-bold font-display tabular-nums mt-1 ${kpi.color}`}
+                  >
+                    {formatGBP(kpi.value)}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Chart */}
+          <Card className="bg-card border border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-foreground">
+                {selectedYear} — Monthly Cash Flow
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-72 w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart
+                    data={chartData}
+                    margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: "#8C8C8C", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      yAxisId="bars"
+                      tick={{ fill: "#8C8C8C", fontSize: 11 }}
+                      tickFormatter={(v: number) =>
+                        `£${(v / 1000).toFixed(0)}k`
+                      }
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      yAxisId="line"
+                      orientation="right"
+                      tick={{ fill: "#8C8C8C", fontSize: 11 }}
+                      tickFormatter={(v: number) =>
+                        `£${(v / 1000).toFixed(0)}k`
+                      }
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<CashFlowTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: "#8C8C8C" }} />
+                    <Bar
+                      yAxisId="bars"
+                      dataKey="Cash In"
+                      fill="#13B5EA"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      yAxisId="bars"
+                      dataKey="Cash Out"
+                      fill="#8C8C8C"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Line
+                      yAxisId="line"
+                      type="monotone"
+                      dataKey="Running Balance"
+                      stroke="#3DCD7B"
+                      strokeWidth={2}
+                      dot={{ fill: "#3DCD7B", r: 3 }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      {/* Chart */}
-      <Card className="bg-card border border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-foreground">
-            {selectedYear} — Monthly Cash Flow
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-72 w-full" />
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart
-                data={chartData}
-                margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fill: "#8C8C8C", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  yAxisId="bars"
-                  tick={{ fill: "#8C8C8C", fontSize: 11 }}
-                  tickFormatter={(v: number) => `£${(v / 1000).toFixed(0)}k`}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  yAxisId="line"
-                  orientation="right"
-                  tick={{ fill: "#8C8C8C", fontSize: 11 }}
-                  tickFormatter={(v: number) => `£${(v / 1000).toFixed(0)}k`}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<CashFlowTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 12, color: "#8C8C8C" }} />
-                <Bar
-                  yAxisId="bars"
-                  dataKey="Cash In"
-                  fill="#13B5EA"
-                  radius={[4, 4, 0, 0]}
-                />
-                <Bar
-                  yAxisId="bars"
-                  dataKey="Cash Out"
-                  fill="#8C8C8C"
-                  radius={[4, 4, 0, 0]}
-                />
-                <Line
-                  yAxisId="line"
-                  type="monotone"
-                  dataKey="Running Balance"
-                  stroke="#3DCD7B"
-                  strokeWidth={2}
-                  dot={{ fill: "#3DCD7B", r: 3 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card className="bg-card border border-border">
-        <CardHeader className="pb-3 border-b border-border">
-          <CardTitle className="text-sm font-semibold text-foreground">
-            Monthly Breakdown
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="text-left py-3 px-4 text-label text-muted-foreground">
-                    Month
-                  </th>
-                  <th className="text-right py-3 px-4 text-label text-muted-foreground">
-                    Cash In
-                  </th>
-                  <th className="text-right py-3 px-4 text-label text-muted-foreground">
-                    Cash Out
-                  </th>
-                  <th className="text-right py-3 px-4 text-label text-muted-foreground">
-                    Net Flow
-                  </th>
-                  <th className="text-right py-3 px-4 text-label text-muted-foreground">
-                    Running Balance
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading
-                  ? ["s1", "s2", "s3", "s4", "s5", "s6"].map((sk) => (
-                      <tr key={sk} className="border-b border-border/50">
-                        {["c1", "c2", "c3", "c4", "c5"].map((ck) => (
-                          <td key={ck} className="py-3 px-4">
-                            <Skeleton className="h-4 w-full" />
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  : cashFlowData?.map((row: MonthlyCashFlow, idx: number) => {
-                      const net = row.netFlow;
-                      return (
-                        <tr
-                          key={`${row.year}-${row.month}`}
-                          className={`border-b border-border/50 transition-colors hover:bg-muted/20 ${idx % 2 === 0 ? "" : "bg-muted/10"}`}
-                        >
-                          <td className="py-3 px-4 font-medium text-foreground">
-                            {MONTH_NAMES[Number(row.month) - 1]}{" "}
-                            {String(row.year)}
-                          </td>
-                          <td className="py-3 px-4 text-right text-success tabular-nums font-mono">
-                            {formatGBP(row.inflow)}
-                          </td>
-                          <td className="py-3 px-4 text-right text-destructive tabular-nums font-mono">
-                            {formatGBP(row.outflow)}
-                          </td>
-                          <td
-                            className={`py-3 px-4 text-right tabular-nums font-mono font-semibold ${net >= 0 ? "text-success" : "text-destructive"}`}
-                          >
-                            {net >= 0 ? "+" : ""}
-                            {formatGBP(net)}
-                          </td>
-                          <td className="py-3 px-4 text-right text-foreground tabular-nums font-mono">
-                            {formatGBP(row.runningBalance)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-              </tbody>
-            </table>
-            {!isLoading && (!cashFlowData || cashFlowData.length === 0) && (
-              <div className="py-12 text-center text-muted-foreground">
-                No cash flow data for {selectedYear}
+          {/* Table */}
+          <Card className="bg-card border border-border">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold text-foreground">
+                Monthly Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      <th className="text-left py-3 px-4 text-label text-muted-foreground">
+                        Month
+                      </th>
+                      <th className="text-right py-3 px-4 text-label text-muted-foreground">
+                        Cash In
+                      </th>
+                      <th className="text-right py-3 px-4 text-label text-muted-foreground">
+                        Cash Out
+                      </th>
+                      <th className="text-right py-3 px-4 text-label text-muted-foreground">
+                        Net Flow
+                      </th>
+                      <th className="text-right py-3 px-4 text-label text-muted-foreground">
+                        Running Balance
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading
+                      ? ["s1", "s2", "s3", "s4", "s5", "s6"].map((sk) => (
+                          <tr key={sk} className="border-b border-border/50">
+                            {["c1", "c2", "c3", "c4", "c5"].map((ck) => (
+                              <td key={ck} className="py-3 px-4">
+                                <Skeleton className="h-4 w-full" />
+                              </td>
+                            ))}
+                          </tr>
+                        ))
+                      : cashFlowData?.map(
+                          (row: MonthlyCashFlow, idx: number) => {
+                            const net = row.netFlow;
+                            return (
+                              <tr
+                                key={`${row.year}-${row.month}`}
+                                className={`border-b border-border/50 transition-colors hover:bg-muted/20 ${idx % 2 === 0 ? "" : "bg-muted/10"}`}
+                              >
+                                <td className="py-3 px-4 font-medium text-foreground">
+                                  {MONTH_NAMES[Number(row.month) - 1]}{" "}
+                                  {String(row.year)}
+                                </td>
+                                <td className="py-3 px-4 text-right text-success tabular-nums font-mono">
+                                  {formatGBP(row.inflow)}
+                                </td>
+                                <td className="py-3 px-4 text-right text-destructive tabular-nums font-mono">
+                                  {formatGBP(row.outflow)}
+                                </td>
+                                <td
+                                  className={`py-3 px-4 text-right tabular-nums font-mono font-semibold ${net >= 0 ? "text-success" : "text-destructive"}`}
+                                >
+                                  {net >= 0 ? "+" : ""}
+                                  {formatGBP(net)}
+                                </td>
+                                <td className="py-3 px-4 text-right text-foreground tabular-nums font-mono">
+                                  {formatGBP(row.runningBalance)}
+                                </td>
+                              </tr>
+                            );
+                          },
+                        )}
+                  </tbody>
+                </table>
+                {!isLoading && (!cashFlowData || cashFlowData.length === 0) && (
+                  <div className="py-12 text-center text-muted-foreground">
+                    No cash flow data for {selectedYear}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
@@ -505,10 +593,13 @@ function MonthlySummaryTab() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  const { data: summary, isLoading } = useMonthlySummary(
-    BigInt(selectedMonth),
-    BigInt(selectedYear),
-  );
+  const {
+    data: summary,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useMonthlySummary(BigInt(selectedMonth), BigInt(selectedYear));
 
   const grossProfit = summary ? summary.revenue - summary.revenue * 0.35 : 0;
   const cogs = summary ? summary.revenue - grossProfit : 0;
@@ -518,78 +609,109 @@ function MonthlySummaryTab() {
       className="space-y-6 mt-6 print:mt-0"
       data-ocid="monthly-summary-content"
     >
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-section-heading text-foreground">
-            Monthly Summary
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Revenue, profit and top performers
+      {isError && (
+        <div
+          className="flex flex-col items-center justify-center py-16 text-center"
+          data-ocid="summary-error-state"
+        >
+          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+            <RefreshCw className="w-4 h-4 text-destructive" />
+          </div>
+          <p className="text-sm font-semibold text-foreground mb-1">
+            Unable to load monthly summary
           </p>
+          <p className="text-xs text-muted-foreground mb-4">
+            {error instanceof Error ? error.message : "Something went wrong."}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-xs"
+            data-ocid="summary-retry-btn"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </button>
         </div>
-        <div className="flex items-center gap-3 print:hidden">
-          <Select
-            value={String(selectedMonth)}
-            onValueChange={(v) => setSelectedMonth(Number(v))}
-          >
-            <SelectTrigger className="w-24" data-ocid="select-summary-month">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTH_OPTIONS.map((m) => (
-                <SelectItem key={m.value} value={String(m.value)}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={String(selectedYear)}
-            onValueChange={(v) => setSelectedYear(Number(v))}
-          >
-            <SelectTrigger className="w-24" data-ocid="select-summary-year">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {YEAR_OPTIONS.map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="gap-2"
-            data-ocid="btn-print-summary"
-          >
-            <Printer className="h-4 w-4" />
-            Print / Export PDF
-          </Button>
-        </div>
-      </div>
+      )}
+      {!isError && (
+        <>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-section-heading text-foreground">
+                Monthly Summary
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Revenue, profit and top performers
+              </p>
+            </div>
+            <div className="flex items-center gap-3 print:hidden">
+              <Select
+                value={String(selectedMonth)}
+                onValueChange={(v) => setSelectedMonth(Number(v))}
+              >
+                <SelectTrigger
+                  className="w-24"
+                  data-ocid="select-summary-month"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_OPTIONS.map((m) => (
+                    <SelectItem key={m.value} value={String(m.value)}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(v) => setSelectedYear(Number(v))}
+              >
+                <SelectTrigger className="w-24" data-ocid="select-summary-year">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEAR_OPTIONS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                className="gap-2"
+                data-ocid="btn-print-summary"
+              >
+                <Printer className="h-4 w-4" />
+                Print / Export PDF
+              </Button>
+            </div>
+          </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[1, 2].map((i) => (
-            <Skeleton key={i} className="h-64 w-full" />
-          ))}
-        </div>
-      ) : !summary ? (
-        <Card className="bg-card border border-border">
-          <CardContent className="py-16 text-center text-muted-foreground">
-            No summary data available for {MONTH_NAMES[selectedMonth - 1]}{" "}
-            {selectedYear}
-          </CardContent>
-        </Card>
-      ) : (
-        <SummaryContent
-          summary={summary}
-          cogs={cogs}
-          grossProfit={grossProfit}
-        />
+          {isLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-64 w-full" />
+              ))}
+            </div>
+          ) : !summary ? (
+            <Card className="bg-card border border-border">
+              <CardContent className="py-16 text-center text-muted-foreground">
+                No summary data available for {MONTH_NAMES[selectedMonth - 1]}{" "}
+                {selectedYear}
+              </CardContent>
+            </Card>
+          ) : (
+            <SummaryContent
+              summary={summary}
+              cogs={cogs}
+              grossProfit={grossProfit}
+            />
+          )}
+        </>
       )}
     </div>
   );
@@ -756,9 +878,20 @@ function SummaryContent({ summary, cogs, grossProfit }: SummaryContentProps) {
 // ─── Main Reports Page ────────────────────────────────────────────────────────
 
 export function Reports() {
-  const { data: receivables, isLoading: loadingReceivables } =
-    useAgedReceivables();
-  const { data: payables, isLoading: loadingPayables } = useAgedPayables();
+  const {
+    data: receivables,
+    isLoading: loadingReceivables,
+    isError: receivablesError,
+    error: receivablesErr,
+    refetch: refetchReceivables,
+  } = useAgedReceivables();
+  const {
+    data: payables,
+    isLoading: loadingPayables,
+    isError: payablesError,
+    error: payablesErr,
+    refetch: refetchPayables,
+  } = useAgedPayables();
 
   const [activeTab, setActiveTab] = useState("receivables");
   const handleTabChange = useCallback((v: string) => setActiveTab(v), []);
@@ -817,6 +950,9 @@ export function Reports() {
             buckets={receivables?.buckets}
             grandTotal={receivables?.grandTotal}
             isLoading={loadingReceivables}
+            isError={receivablesError}
+            error={receivablesErr instanceof Error ? receivablesErr : null}
+            onRetry={() => refetchReceivables()}
           />
         </TabsContent>
 
@@ -828,6 +964,9 @@ export function Reports() {
             buckets={payables?.buckets}
             grandTotal={payables?.grandTotal}
             isLoading={loadingPayables}
+            isError={payablesError}
+            error={payablesErr instanceof Error ? payablesErr : null}
+            onRetry={() => refetchPayables()}
           />
         </TabsContent>
 

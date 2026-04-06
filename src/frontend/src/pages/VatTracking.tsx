@@ -20,7 +20,13 @@ import { useBills, useInvoices, useVatSummary } from "@/hooks/useBackend";
 import { formatDate, formatGBP, vatRateToNumber } from "@/lib/format";
 import { VatRate } from "@/types";
 import type { BillShared, InvoiceShared } from "@/types";
-import { AlertCircle, FileText, Printer, Receipt } from "lucide-react";
+import {
+  AlertCircle,
+  FileText,
+  Printer,
+  Receipt,
+  RefreshCw,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -334,12 +340,25 @@ export function VatTracking() {
 
   const years = Array.from({ length: 4 }, (_, i) => defaultY - i);
 
-  const { data: vatSummary, isLoading: summaryLoading } = useVatSummary(
-    BigInt(quarter),
-    BigInt(year),
-  );
-  const { data: allInvoices = [], isLoading: invoicesLoading } = useInvoices();
-  const { data: allBills = [], isLoading: billsLoading } = useBills();
+  const {
+    data: vatSummary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    error: summaryErr,
+    refetch: refetchSummary,
+  } = useVatSummary(BigInt(quarter), BigInt(year));
+  const {
+    data: allInvoices = [],
+    isLoading: invoicesLoading,
+    isError: invoicesError,
+    refetch: refetchInvoices,
+  } = useInvoices();
+  const {
+    data: allBills = [],
+    isLoading: billsLoading,
+    isError: billsError,
+    refetch: refetchBills,
+  } = useBills();
 
   const periodInvoices = useMemo(
     () =>
@@ -355,6 +374,9 @@ export function VatTracking() {
   const netOwed = vatSummary?.netVatOwed ?? 0;
   const netVariant =
     netOwed > 0 ? "negative" : netOwed < 0 ? "positive" : "default";
+
+  const anyError = summaryError || invoicesError || billsError;
+  const firstErr = summaryErr ?? null;
 
   return (
     <>
@@ -429,125 +451,162 @@ export function VatTracking() {
       </div>
 
       <div className="p-6 space-y-6" data-ocid="vat-page">
-        {/* ── Summary Cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SummaryCard
-            label="VAT Collected"
-            value={vatSummary?.vatCollected ?? 0}
-            isLoading={summaryLoading}
-            data-ocid="vat-collected-card"
-          />
-          <SummaryCard
-            label="VAT Paid on Bills"
-            value={vatSummary?.vatPaid ?? 0}
-            variant="positive"
-            isLoading={summaryLoading}
-            data-ocid="vat-paid-card"
-          />
-          <SummaryCard
-            label="Net VAT Owed to HMRC"
-            value={netOwed}
-            variant={netVariant}
-            isLoading={summaryLoading}
-            data-ocid="vat-net-owed-card"
-          />
-        </div>
-
-        {/* ── VAT by Rate Breakdown ── */}
-        {invoicesLoading || billsLoading ? (
-          <div className="card-elevated rounded-xl p-5 space-y-3">
-            <Skeleton className="h-5 w-40" />
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : (
-          <VatBreakdownTable invoices={periodInvoices} bills={periodBills} />
-        )}
-
-        {/* ── Invoice VAT Detail ── */}
-        <div className="card-elevated rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary" />
-              <h2 className="text-base font-semibold font-display text-foreground">
-                Invoice VAT
-              </h2>
-              <Badge variant="secondary" className="text-xs">
-                {periodInvoices.length}
-              </Badge>
+        {anyError && (
+          <div
+            className="flex flex-col items-center justify-center py-16 text-center"
+            data-ocid="vat-error-state"
+          >
+            <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+              <RefreshCw className="w-4 h-4 text-destructive" />
             </div>
-            <input
-              type="search"
-              placeholder="Search invoices…"
-              value={invoiceSearch}
-              onChange={(e) => setInvoiceSearch(e.target.value)}
-              className="border border-input bg-background rounded-md px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full sm:w-56"
-              data-ocid="invoice-vat-search"
-            />
+            <p className="text-sm font-semibold text-foreground mb-1">
+              Unable to load VAT data
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">
+              {firstErr instanceof Error
+                ? firstErr.message
+                : "Something went wrong."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                refetchSummary();
+                refetchInvoices();
+                refetchBills();
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-xs"
+              data-ocid="vat-retry-btn"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Retry
+            </button>
           </div>
-          <div className="overflow-x-auto">
-            {invoicesLoading ? (
-              <div className="p-5 space-y-3">
+        )}
+        {/* ── Summary Cards ── */}
+        {!anyError && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <SummaryCard
+                label="VAT Collected"
+                value={vatSummary?.vatCollected ?? 0}
+                isLoading={summaryLoading}
+                data-ocid="vat-collected-card"
+              />
+              <SummaryCard
+                label="VAT Paid on Bills"
+                value={vatSummary?.vatPaid ?? 0}
+                variant="positive"
+                isLoading={summaryLoading}
+                data-ocid="vat-paid-card"
+              />
+              <SummaryCard
+                label="Net VAT Owed to HMRC"
+                value={netOwed}
+                variant={netVariant}
+                isLoading={summaryLoading}
+                data-ocid="vat-net-owed-card"
+              />
+            </div>
+
+            {/* ── VAT by Rate Breakdown ── */}
+            {invoicesLoading || billsLoading ? (
+              <div className="card-elevated rounded-xl p-5 space-y-3">
+                <Skeleton className="h-5 w-40" />
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-10 w-full" />
                 ))}
               </div>
             ) : (
-              <InvoiceVatTable
+              <VatBreakdownTable
                 invoices={periodInvoices}
-                searchQuery={invoiceSearch}
+                bills={periodBills}
               />
             )}
-          </div>
-        </div>
 
-        {/* ── Bill VAT Detail ── */}
-        <div className="card-elevated rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-primary" />
-              <h2 className="text-base font-semibold font-display text-foreground">
-                Bill VAT
-              </h2>
-              <Badge variant="secondary" className="text-xs">
-                {periodBills.length}
-              </Badge>
-            </div>
-            <input
-              type="search"
-              placeholder="Search bills…"
-              value={billSearch}
-              onChange={(e) => setBillSearch(e.target.value)}
-              className="border border-input bg-background rounded-md px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full sm:w-56"
-              data-ocid="bill-vat-search"
-            />
-          </div>
-          <div className="overflow-x-auto">
-            {billsLoading ? (
-              <div className="p-5 space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
+            {/* ── Invoice VAT Detail ── */}
+            <div className="card-elevated rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <h2 className="text-base font-semibold font-display text-foreground">
+                    Invoice VAT
+                  </h2>
+                  <Badge variant="secondary" className="text-xs">
+                    {periodInvoices.length}
+                  </Badge>
+                </div>
+                <input
+                  type="search"
+                  placeholder="Search invoices…"
+                  value={invoiceSearch}
+                  onChange={(e) => setInvoiceSearch(e.target.value)}
+                  className="border border-input bg-background rounded-md px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full sm:w-56"
+                  data-ocid="invoice-vat-search"
+                />
               </div>
-            ) : (
-              <BillVatTable bills={periodBills} searchQuery={billSearch} />
-            )}
-          </div>
-        </div>
+              <div className="overflow-x-auto">
+                {invoicesLoading ? (
+                  <div className="p-5 space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <InvoiceVatTable
+                    invoices={periodInvoices}
+                    searchQuery={invoiceSearch}
+                  />
+                )}
+              </div>
+            </div>
 
-        {/* ── Disclaimer ── */}
-        <div className="flex gap-3 items-start rounded-xl border border-warning/30 bg-warning/5 p-4">
-          <AlertCircle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            <span className="font-semibold text-foreground">
-              For reference only.
-            </span>{" "}
-            This summary is based on the data entered in Glow &amp; Co. and is
-            not a substitute for professional advice. Please consult a qualified
-            accountant before submitting your VAT return to HMRC.
-          </p>
-        </div>
+            {/* ── Bill VAT Detail ── */}
+            <div className="card-elevated rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-primary" />
+                  <h2 className="text-base font-semibold font-display text-foreground">
+                    Bill VAT
+                  </h2>
+                  <Badge variant="secondary" className="text-xs">
+                    {periodBills.length}
+                  </Badge>
+                </div>
+                <input
+                  type="search"
+                  placeholder="Search bills…"
+                  value={billSearch}
+                  onChange={(e) => setBillSearch(e.target.value)}
+                  className="border border-input bg-background rounded-md px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full sm:w-56"
+                  data-ocid="bill-vat-search"
+                />
+              </div>
+              <div className="overflow-x-auto">
+                {billsLoading ? (
+                  <div className="p-5 space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <BillVatTable bills={periodBills} searchQuery={billSearch} />
+                )}
+              </div>
+            </div>
+
+            {/* ── Disclaimer ── */}
+            <div className="flex gap-3 items-start rounded-xl border border-warning/30 bg-warning/5 p-4">
+              <AlertCircle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">
+                  For reference only.
+                </span>{" "}
+                This summary is based on the data entered in Glow &amp; Co. and
+                is not a substitute for professional advice. Please consult a
+                qualified accountant before submitting your VAT return to HMRC.
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

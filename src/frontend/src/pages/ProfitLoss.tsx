@@ -3,7 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { FileDown, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  FileDown,
+  Minus,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { useCallback, useState } from "react";
 import { useProfitAndLoss } from "../hooks/useBackend";
 import {
@@ -437,7 +443,10 @@ export function ProfitLoss() {
   const startTs = dateToTimestamp(startDate);
   const endTs = dateToTimestamp(endDate);
 
-  const { data, isLoading, isError } = useProfitAndLoss(startTs, endTs);
+  const { data, isLoading, isError, error, refetch } = useProfitAndLoss(
+    startTs,
+    endTs,
+  );
 
   const handlePrint = useCallback(() => {
     const style = document.createElement("style");
@@ -528,13 +537,31 @@ export function ProfitLoss() {
       {isLoading && <PLSkeleton />}
 
       {isError && (
-        <Card className="card-elevated border-destructive/40">
-          <CardContent className="p-8 text-center">
-            <p className="text-destructive font-medium">
-              Failed to load P&amp;L data. Please refresh and try again.
-            </p>
-          </CardContent>
-        </Card>
+        <div
+          className="flex flex-col items-center justify-center py-20 text-center"
+          data-ocid="pl-error-state"
+        >
+          <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <RefreshCw className="w-5 h-5 text-destructive" />
+          </div>
+          <p className="text-lg font-semibold text-foreground mb-1">
+            Unable to load P&amp;L data
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {error instanceof Error
+              ? error.message
+              : "Something went wrong. Please try again."}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+            data-ocid="pl-retry-btn"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
       )}
 
       {data && !isLoading && (

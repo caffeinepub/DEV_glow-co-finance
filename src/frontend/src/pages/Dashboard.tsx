@@ -8,8 +8,8 @@ import {
 } from "@/hooks/useBackend";
 import { MONTH_NAMES, formatDate, formatGBP } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Clock, TrendingDown } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { AlertTriangle, Clock, RefreshCw, TrendingDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -184,7 +184,41 @@ function ChartTooltip({
   );
 }
 
-// ─── Skeleton States ─────────────────────────────────────────────────────────
+// ─── Error Card ───────────────────────────────────────────────────────────────
+
+function ErrorCard({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center min-h-[400px] gap-4"
+      data-ocid="dashboard-error-state"
+    >
+      <div className="text-center max-w-md">
+        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+          <RefreshCw className="w-5 h-5 text-destructive" />
+        </div>
+        <h2 className="text-xl font-semibold text-foreground mb-2">
+          Unable to load dashboard
+        </h2>
+        <p className="text-muted-foreground mb-6 text-sm">{message}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+          data-ocid="dashboard-retry-btn"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function DashboardSkeleton() {
   return (
@@ -208,10 +242,17 @@ function DashboardSkeleton() {
 
 export function Dashboard() {
   const currentYear = BigInt(new Date().getFullYear());
-  const { data: stats, isLoading } = useDashboardStats();
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useDashboardStats();
   const { data: cashFlowData } = useCashFlow(currentYear);
   const initMutation = useInitializeSampleData();
   const seeded = useRef(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   const mutate = initMutation.mutate;
   useEffect(() => {
@@ -225,6 +266,16 @@ export function Dashboard() {
     }
   }, [mutate]);
 
+  // Loading timeout — show error card after 35s if still loading
+  useEffect(() => {
+    if (!isLoading) {
+      setTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setTimedOut(true), 35_000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   const profit = stats?.netProfitThisMonth ?? 0;
   const profitPositive = profit >= 0;
 
@@ -236,6 +287,12 @@ export function Dashboard() {
       }))
     : [];
 
+  const errorMessage = isError
+    ? error instanceof Error
+      ? error.message
+      : "Something went wrong. Please try again."
+    : "Loading is taking longer than expected. The server may be unavailable.";
+
   return (
     <div className="p-4 md:p-6 space-y-6" data-ocid="dashboard-page">
       {/* Header */}
@@ -246,7 +303,9 @@ export function Dashboard() {
         </p>
       </div>
 
-      {isLoading || !stats ? (
+      {isError || (isLoading && timedOut) ? (
+        <ErrorCard message={errorMessage} onRetry={() => refetch()} />
+      ) : isLoading || !stats ? (
         <DashboardSkeleton />
       ) : (
         <>

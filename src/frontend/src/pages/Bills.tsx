@@ -17,7 +17,14 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUpDown, CheckCircle2, Pencil, Plus, X } from "lucide-react";
+import {
+  ArrowUpDown,
+  CheckCircle2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { StatusBadge } from "../components/shared/StatusBadge";
@@ -426,7 +433,7 @@ function SortButton({
 type ModalMode = "none" | "create" | "edit" | "pay";
 
 export function Bills() {
-  const { data: bills = [], isLoading } = useBills();
+  const { data: bills = [], isLoading, isError, error, refetch } = useBills();
   const { data: suppliers = [] } = useSuppliers();
   const { data: products = [] } = useProducts();
 
@@ -721,168 +728,196 @@ export function Bills() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Bill #
-                </th>
-                <th className="px-4 py-3 text-left">
-                  <SortButton
-                    field="supplierName"
-                    current={sortField}
-                    dir={sortDir}
-                    onSort={handleSort}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wider">
-                      Supplier
-                    </span>
-                  </SortButton>
-                </th>
-                <th className="px-4 py-3 text-left">
-                  <SortButton
-                    field="date"
-                    current={sortField}
-                    dir={sortDir}
-                    onSort={handleSort}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wider">
-                      Date
-                    </span>
-                  </SortButton>
-                </th>
-                <th className="px-4 py-3 text-left">
-                  <SortButton
-                    field="dueDate"
-                    current={sortField}
-                    dir={sortDir}
-                    onSort={handleSort}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wider">
-                      Due Date
-                    </span>
-                  </SortButton>
-                </th>
-                <th className="px-4 py-3 text-right">
-                  <SortButton
-                    field="amount"
-                    current={sortField}
-                    dir={sortDir}
-                    onSort={handleSort}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wider">
-                      Amount
-                    </span>
-                  </SortButton>
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  VAT
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                (["a", "b", "c", "d", "e"] as const).map((row) => (
-                  <tr
-                    key={`skel-row-${row}`}
-                    className="border-b border-border/50"
-                  >
-                    {(
-                      ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const
-                    ).map((col) => (
-                      <td key={`skel-${row}-${col}`} className="px-4 py-3">
-                        <Skeleton className="h-4 w-full" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-4 py-16 text-center"
-                    data-ocid="bills-empty-state"
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-2xl">
-                        🧾
-                      </div>
-                      <p className="font-medium text-foreground">
-                        No bills found
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {bills.length === 0
-                          ? "Add your first supplier bill to get started"
-                          : "Try adjusting your filters"}
-                      </p>
-                      {bills.length === 0 && (
-                        <Button
-                          size="sm"
-                          className="mt-2"
-                          onClick={() => setModal("create")}
-                          data-ocid="bills-empty-create-btn"
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" />
-                          New Bill
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((bill) => (
-                  <BillRow
-                    key={bill.id.toString()}
-                    bill={bill}
-                    onEdit={() => openEdit(bill)}
-                    onPay={() => openPay(bill)}
-                  />
-                ))
-              )}
-            </tbody>
-            {/* Totals Row */}
-            {!isLoading && filtered.length > 0 && (
-              <tfoot>
-                <tr className="border-t-2 border-border bg-muted/30">
-                  <td
-                    colSpan={4}
-                    className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                  >
-                    {filtered.length} bill{filtered.length !== 1 ? "s" : ""}{" "}
-                    total
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold font-mono text-foreground">
-                    {formatGBP(totalAmount)}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold font-mono text-muted-foreground">
-                    {formatGBP(totalVat)}
-                  </td>
-                  <td
-                    colSpan={3}
-                    className="px-4 py-3 text-right text-xs text-muted-foreground"
-                  >
-                    Total incl. VAT:{" "}
-                    <span className="font-semibold text-foreground font-mono">
-                      {formatGBP(totalAmount + totalVat)}
-                    </span>
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
+      {isError ? (
+        <div
+          className="bg-card border border-border rounded-xl flex flex-col items-center justify-center py-20 text-center"
+          data-ocid="bills-error-state"
+        >
+          <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <RefreshCw className="w-5 h-5 text-destructive" />
+          </div>
+          <p className="text-lg font-semibold text-foreground mb-1">
+            Unable to load bills
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {error instanceof Error
+              ? error.message
+              : "Something went wrong. Please try again."}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+            data-ocid="bills-retry-btn"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
         </div>
-      </div>
+      ) : (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                    Bill #
+                  </th>
+                  <th className="px-4 py-3 text-left">
+                    <SortButton
+                      field="supplierName"
+                      current={sortField}
+                      dir={sortDir}
+                      onSort={handleSort}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        Supplier
+                      </span>
+                    </SortButton>
+                  </th>
+                  <th className="px-4 py-3 text-left">
+                    <SortButton
+                      field="date"
+                      current={sortField}
+                      dir={sortDir}
+                      onSort={handleSort}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        Date
+                      </span>
+                    </SortButton>
+                  </th>
+                  <th className="px-4 py-3 text-left">
+                    <SortButton
+                      field="dueDate"
+                      current={sortField}
+                      dir={sortDir}
+                      onSort={handleSort}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        Due Date
+                      </span>
+                    </SortButton>
+                  </th>
+                  <th className="px-4 py-3 text-right">
+                    <SortButton
+                      field="amount"
+                      current={sortField}
+                      dir={sortDir}
+                      onSort={handleSort}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        Amount
+                      </span>
+                    </SortButton>
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                    VAT
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  (["a", "b", "c", "d", "e"] as const).map((row) => (
+                    <tr
+                      key={`skel-row-${row}`}
+                      className="border-b border-border/50"
+                    >
+                      {(
+                        ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const
+                      ).map((col) => (
+                        <td key={`skel-${row}-${col}`} className="px-4 py-3">
+                          <Skeleton className="h-4 w-full" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={9}
+                      className="px-4 py-16 text-center"
+                      data-ocid="bills-empty-state"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-2xl">
+                          🧾
+                        </div>
+                        <p className="font-medium text-foreground">
+                          No bills found
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {bills.length === 0
+                            ? "Add your first supplier bill to get started"
+                            : "Try adjusting your filters"}
+                        </p>
+                        {bills.length === 0 && (
+                          <Button
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => setModal("create")}
+                            data-ocid="bills-empty-create-btn"
+                          >
+                            <Plus className="w-3.5 h-3.5 mr-1" />
+                            New Bill
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((bill) => (
+                    <BillRow
+                      key={bill.id.toString()}
+                      bill={bill}
+                      onEdit={() => openEdit(bill)}
+                      onPay={() => openPay(bill)}
+                    />
+                  ))
+                )}
+              </tbody>
+              {/* Totals Row */}
+              {!isLoading && filtered.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-muted/30">
+                    <td
+                      colSpan={4}
+                      className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                    >
+                      {filtered.length} bill{filtered.length !== 1 ? "s" : ""}{" "}
+                      total
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold font-mono text-foreground">
+                      {formatGBP(totalAmount)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold font-mono text-muted-foreground">
+                      {formatGBP(totalVat)}
+                    </td>
+                    <td
+                      colSpan={3}
+                      className="px-4 py-3 text-right text-xs text-muted-foreground"
+                    >
+                      Total incl. VAT:{" "}
+                      <span className="font-semibold text-foreground font-mono">
+                        {formatGBP(totalAmount + totalVat)}
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Create Dialog */}
       <Dialog
